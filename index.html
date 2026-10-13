@@ -14,14 +14,15 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles-v7.css">
+  <link rel="stylesheet" href="./styles-v7.css?v=8">
+  <link rel="stylesheet" href="./experience-v8.css?v=8">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite">
     <div class="boot-inner">
       <div class="boot-mark">€</div>
       <div class="boot-title">Finanze</div>
-      <div class="boot-copy">Carico i tuoi dati…</div>
+      <div class="boot-copy">Metto in ordine i tuoi numeri…</div>
       <div class="boot-skeleton"><i></i><i></i><i></i></div>
     </div>
   </div>
@@ -156,7 +157,6 @@
       <label class="drawer-file"><span data-icon="upload"></span><div><strong>Importa backup</strong><small>Ripristina un file JSON</small></div><i data-icon="chevron"></i><input id="importBackupInput" type="file" accept=".json,application/json" hidden></label>
     </div>
     <div class="drawer-group">
-      <button data-action="pin"><span data-icon="lock"></span><div><strong>PIN</strong><small>Imposta o modifica il codice</small></div><i data-icon="chevron"></i></button>
       <button data-action="reset" class="danger-row"><span data-icon="trash"></span><div><strong>Reset dati locali</strong><small>Operazione irreversibile</small></div><i data-icon="chevron"></i></button>
     </div>
     <p class="privacy-note">I dati finanziari restano sul tuo dispositivo. GitHub ospita solo il codice dell’app.</p>
@@ -170,11 +170,12 @@
   </section>
 
   <div id="lockScreen" class="lock-screen" hidden>
-    <div class="lock-card"><div class="lock-mark">€</div><h2>Finanze</h2><p>Inserisci il PIN</p><input id="pinInput" inputmode="numeric" maxlength="6" placeholder="••••"><button id="unlockBtn" class="primary-button">Sblocca</button><small id="pinError"></small></div>
+    <div class="lock-card"><div class="lock-mark">€</div><h2>Finanze</h2><p></p><input id="pinInput" inputmode="numeric" maxlength="6"><button id="unlockBtn" class="primary-button">Continua</button><small id="pinError"></small></div>
   </div>
   <div id="toast" class="toast" hidden></div>
 
-  <script src="./db.js?v=7"></script>
-  <script src="./app-v7.js"></script>
+  <script src="./db.js?v=8"></script>
+  <script src="./app-v7.js?v=8"></script>
+  <script src="./experience-v8.js?v=8"></script>
 </body>
 </html>
