@@ -1,4 +1,4 @@
-const CACHE='finanze-pwa-v7';
+const CACHE='finanze-pwa-v8';
 const ASSETS=['./','./index.html','./styles-v7.css','./db.js?v=7','./app-v7.js','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
