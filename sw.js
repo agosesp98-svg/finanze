@@ -1,5 +1,5 @@
-const CACHE='finanze-pwa-v4';
-const ASSETS=['./','./index.html','./styles.css?v=4','./db.js?v=4','./app.js?v=4','./ui.js?v=4','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
+const CACHE='finanze-pwa-v5';
+const ASSETS=['./','./index.html','./styles.css?v=5','./db.js?v=5','./planner.js?v=5','./app.js?v=5','./ui.js?v=5','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)));
