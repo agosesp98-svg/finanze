@@ -11,7 +11,31 @@ const FinanceDB=(()=>{
     });
     return dbPromise;
   }
-  async function getAll(s){const d=await open();return new Promise((r,j)=>{const q=d.transaction(s,'readonly').objectStore(s).getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>j(q.error);});}
+  function iso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  function nextSalaryDate(day=10){
+    const now=new Date();
+    const safeDay=Math.min(28,Math.max(1,Number(day)||10));
+    let d=new Date(now.getFullYear(),now.getMonth(),safeDay,12,0,0,0);
+    if(now.getDate()>safeDay)d=new Date(now.getFullYear(),now.getMonth()+1,safeDay,12,0,0,0);
+    return iso(d);
+  }
+  async function rawGetAll(s){const d=await open();return new Promise((r,j)=>{const q=d.transaction(s,'readonly').objectStore(s).getAll();q.onsuccess=()=>r(q.result||[]);q.onerror=()=>j(q.error);});}
+  async function getAll(s){
+    const rows=await rawGetAll(s);
+    if(s!=='settings')return rows;
+    const salaryDay=Number(rows.find(x=>x.key==='salaryDay')?.value||10);
+    const salaryDate=nextSalaryDate(salaryDay);
+    const upsert=(key,value)=>{const x=rows.find(r=>r.key===key);if(x)x.value=value;else rows.push({key,value});};
+    upsert('salaryDay',salaryDay);
+    upsert('salaryRule','monthly_by_day');
+    upsert('nextSalaryDate',salaryDate);
+    Promise.all([
+      put('settings',{key:'salaryDay',value:salaryDay}),
+      put('settings',{key:'salaryRule',value:'monthly_by_day'}),
+      put('settings',{key:'nextSalaryDate',value:salaryDate})
+    ]).catch(()=>{});
+    return rows;
+  }
   async function get(s,k){const d=await open();return new Promise((r,j)=>{const q=d.transaction(s,'readonly').objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});}
   async function put(s,v){const d=await open();return new Promise((r,j)=>{const q=d.transaction(s,'readwrite').objectStore(s).put(v);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});}
   async function add(s,v){const d=await open();return new Promise((r,j)=>{const q=d.transaction(s,'readwrite').objectStore(s).add(v);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error);});}
