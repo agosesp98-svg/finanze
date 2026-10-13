@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0b0f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Finanze">
+  <meta name="format-detection" content="telephone=no">
+  <title>Finanze</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="eyebrow">LE MIE FINANZE</div>
+        <h1 id="pageTitle">Oggi</h1>
+      </div>
+      <button id="quickAddBtn" class="icon-button" aria-label="Aggiungi movimento" title="Aggiungi movimento">
+        <span>＋</span>
+      </button>
+    </header>
+
+    <main id="mainContent" class="content">
+      <section id="view-dashboard" class="view active" aria-labelledby="pageTitle">
+        <div class="hero-card">
+          <div class="hero-topline">
+            <span>Liquidità totale</span>
+            <span class="status-chip">Snapshot 13/10/2026</span>
+          </div>
+          <div id="totalLiquidity" class="hero-value">€ 0,00</div>
+          <div class="hero-meta">
+            <span id="protectedLiquidity">Protetti € 0,00</span>
+            <span id="ordinaryLiquidity">Ordinari € 0,00</span>
+          </div>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <div class="metric-label">Libero davvero</div>
+            <div id="freeLiquidity" class="metric-value">€ 0,00</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Già impegnato</div>
+            <div id="committedAmount" class="metric-value">€ 0,00</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">Budget residuo</div>
+            <div id="remainingBudget" class="metric-value">€ 0,00</div>
+          </article>
+          <article class="metric-card">
+            <div class="metric-label">In arrivo</div>
+            <div id="expectedIncomeRange" class="metric-value small">€ 0,00</div>
+          </article>
+        </div>
+
+        <section class="section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">PROSSIMA SCADENZA</div>
+              <h2 id="nextCommitmentName">Nessuna scadenza</h2>
+            </div>
+            <div class="right">
+              <div id="nextCommitmentAmount" class="amount-strong">—</div>
+              <div id="nextCommitmentDate" class="muted"></div>
+            </div>
+          </div>
+          <button id="openCommitmentsBtn" class="text-button">Vedi tutte le scadenze</button>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">BUDGET QUOTIDIANO</div>
+              <h2>Fino al prossimo stipendio</h2>
+            </div>
+            <div class="right">
+              <div id="budgetSummary" class="amount-strong">€ 0,00 / € 0,00</div>
+            </div>
+          </div>
+          <div class="progress"><div id="budgetProgress" class="progress-bar"></div></div>
+          <div id="budgetRemainingText" class="muted">Restano € 0,00.</div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">OBIETTIVO PRIORITARIO</div>
+              <h2>Fondo tranquillità</h2>
+            </div>
+            <div id="tranquilityPercent" class="amount-strong">0%</div>
+          </div>
+          <div class="progress"><div id="tranquilityProgress" class="progress-bar alt"></div></div>
+          <div id="tranquilityText" class="muted">€ 0,00 / € 0,00</div>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">ENTRATE ATTESE</div>
+              <h2>Da incassare</h2>
+            </div>
+          </div>
+          <div id="expectedIncomeList" class="list"></div>
+        </section>
+      </section>
+
+      <section id="view-accounts" class="view">
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">SALDI</div>
+              <h2>Conti e disponibilità</h2>
+            </div>
+            <button id="openTransferBtn" class="small-button">Trasferisci</button>
+          </div>
+          <div id="accountsList" class="list"></div>
+        </div>
+      </section>
+
+      <section id="view-movements" class="view">
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">STORICO</div>
+              <h2>Movimenti</h2>
+            </div>
+            <button id="addMovementBtn" class="small-button">Aggiungi</button>
+          </div>
+          <div class="filters-row">
+            <select id="movementFilter" class="select">
+              <option value="all">Tutti</option>
+              <option value="expense">Uscite</option>
+              <option value="income">Entrate</option>
+              <option value="transfer">Trasferimenti</option>
+              <option value="adjustment">Rettifiche</option>
+            </select>
+          </div>
+          <div id="movementsList" class="list"></div>
+        </div>
+      </section>
+
+      <section id="view-budget" class="view">
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">BUDGET</div>
+              <h2>Vita quotidiana</h2>
+            </div>
+          </div>
+          <div id="budgetCategories" class="stack"></div>
+        </div>
+      </section>
+
+      <section id="view-plan" class="view">
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">PIANO</div>
+              <h2>Obiettivi</h2>
+            </div>
+          </div>
+          <div id="goalsList" class="stack"></div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">SCADENZE</div>
+              <h2>Impegni futuri</h2>
+            </div>
+          </div>
+          <div id="commitmentsList" class="list"></div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">FINANZIAMENTI</div>
+              <h2>Rate e debiti</h2>
+            </div>
+          </div>
+          <div id="liabilitiesList" class="list"></div>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">DATI</div>
+              <h2>Backup e sicurezza</h2>
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button id="exportBackupBtn" class="primary-button">Esporta backup</button>
+            <label class="secondary-button file-label">
+              Importa backup
+              <input id="importBackupInput" type="file" accept=".json,application/json" hidden>
+            </label>
+            <button id="setPinBtn" class="secondary-button">Imposta / cambia PIN</button>
+            <button id="resetBtn" class="danger-button">Ripristina snapshot iniziale</button>
+          </div>
+          <p class="muted small-copy">I dati restano sul dispositivo. Il backup serve per evitare di perdere lo storico in caso di cancellazione dei dati del browser o cambio telefono.</p>
+        </div>
+
+        <div class="section-card">
+          <div class="section-head compact">
+            <div>
+              <div class="eyebrow">APP</div>
+              <h2>Installazione su iPhone</h2>
+            </div>
+          </div>
+          <p class="muted">Apri il sito in Safari, tocca Condividi e poi “Aggiungi alla schermata Home”.</p>
+        </div>
+      </section>
+    </main>
+
+    <nav class="tabbar" aria-label="Navigazione principale">
+      <button class="tab active" data-view="dashboard" data-title="Oggi"><span class="tab-icon">⌂</span><span>Oggi</span></button>
+      <button class="tab" data-view="accounts" data-title="Conti"><span class="tab-icon">◫</span><span>Conti</span></button>
+      <button class="tab" data-view="movements" data-title="Movimenti"><span class="tab-icon">↕</span><span>Movimenti</span></button>
+      <button class="tab" data-view="budget" data-title="Budget"><span class="tab-icon">◔</span><span>Budget</span></button>
+      <button class="tab" data-view="plan" data-title="Piano"><span class="tab-icon">◎</span><span>Piano</span></button>
+      <button class="tab" data-view="settings" data-title="Impostazioni"><span class="tab-icon">⚙</span><span>Altro</span></button>
+    </nav>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop hidden" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <h2 id="modalTitle">Aggiungi movimento</h2>
+        <button id="closeModalBtn" class="icon-button" aria-label="Chiudi">×</button>
+      </div>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="lockScreen" class="lock-screen hidden">
+    <div class="lock-card">
+      <div class="lock-logo">€</div>
+      <h2>Finanze</h2>
+      <p class="muted">Inserisci il PIN</p>
+      <input id="pinInput" inputmode="numeric" maxlength="6" class="pin-input" placeholder="••••">
+      <button id="unlockBtn" class="primary-button">Sblocca</button>
+      <div id="pinError" class="error-text" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="./db.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
