@@ -1,4 +1,4 @@
-const CACHE='finanze-pwa-v10';
+const CACHE='finanze-pwa-v11';
 const ASSETS=['./','./index.html','./styles-v7.css?v=10','./experience-v8.css?v=10','./experience-v9.css?v=10','./db.js?v=10','./app-v7.js?v=10','./experience-v8.js?v=10','./experience-v9.js?v=10','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
@@ -10,7 +10,7 @@ self.addEventListener('fetch',e=>{
     return;
   }
   e.respondWith(caches.match(e.request).then(cached=>{
-    const network=fetch(e.request).then(r=>{if(r&&r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));}return r;}).catch(()=>cached);
+    const network=fetch(e.request,{cache:'no-cache'}).then(r=>{if(r&&r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy));}return r;}).catch(()=>cached);
     return cached||network;
   }));
 });
