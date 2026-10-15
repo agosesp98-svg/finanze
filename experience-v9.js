@@ -12,8 +12,8 @@
     card:'<rect x="3.5" y="5.5" width="17" height="13" rx="3"/><path d="M3.5 9.5h17M7 15h4"/>',
     chevron:'<path d="m9 6 6 6-6 6"/>'
   };
-  const logoIntesa='https://upload.wikimedia.org/wikipedia/commons/5/51/Intesa_Sanpaolo_logo.svg';
-  const logoPostepay='https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Postepay.svg';
+  const logoIntesa='https://commons.wikimedia.org/wiki/Special:Redirect/file/Intesa%20Sanpaolo%20logo.svg';
+  const logoPostepay='https://commons.wikimedia.org/wiki/Special:Redirect/file/Logo%20Postepay.svg';
   let financeBusy=false,financeQueued=false,lastFinanceSignature='';
 
   function fixUpcomingSpacing(){const rail=$('#v8UpcomingRail');if(rail)rail.classList.add('v9-upcoming-rail')}
