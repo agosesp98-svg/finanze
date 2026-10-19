@@ -3,8 +3,8 @@
   const money=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(Number(n||0));
   const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   const BRAND={
-    intesa:{src:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Intesa_Sanpaolo_logo.svg/400px-Intesa_Sanpaolo_logo.svg.png',alt:'Intesa Sanpaolo',fallback:'INTESA SANPAOLO'},
-    postepay:{src:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Logo_Postepay.svg/320px-Logo_Postepay.svg.png',alt:'Postepay',fallback:'POSTEPAY'}
+    intesa:{src:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Intesa_Sanpaolo_logo.svg',alt:'Intesa Sanpaolo',fallback:'INTESA SANPAOLO'},
+    postepay:{src:'https://commons.wikimedia.org/wiki/Special:Redirect/file/Logo_Postepay.png',alt:'Postepay',fallback:'POSTEPAY'}
   };
   let timer=null;
 
