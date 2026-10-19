@@ -3,8 +3,8 @@
   const money=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(Number(n||0));
   const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
   const BRAND={
-    intesa:{src:'https://upload.wikimedia.org/wikipedia/commons/5/51/Intesa_Sanpaolo_logo.svg',alt:'Intesa Sanpaolo',fallback:'INTESA SANPAOLO'},
-    postepay:{src:'https://upload.wikimedia.org/wikipedia/commons/2/22/Logo_Postepay.svg',alt:'Postepay',fallback:'POSTEPAY'}
+    intesa:{src:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Intesa_Sanpaolo_logo.svg/400px-Intesa_Sanpaolo_logo.svg.png',alt:'Intesa Sanpaolo',fallback:'INTESA SANPAOLO'},
+    postepay:{src:'https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Logo_Postepay.svg/320px-Logo_Postepay.svg.png',alt:'Postepay',fallback:'POSTEPAY'}
   };
   let timer=null;
 
@@ -19,15 +19,17 @@
   function brandMarkup(type,compact=false){
     const b=BRAND[type];
     if(!b)return'';
-    return `<span class="v17-brand-mark ${compact?'is-compact':''}" data-v17-logo="${type}"><img src="${b.src}" alt="${b.alt}" referrerpolicy="no-referrer"><span>${b.fallback}</span></span>`;
+    return `<span class="v17-brand-mark ${compact?'is-compact':''}" data-v17-logo="${type}"><img src="${b.src}" alt="${b.alt}" loading="eager" decoding="async"><span>${b.fallback}</span></span>`;
   }
   function attachLogoFallback(root=document){
     $$('[data-v17-logo]',root).forEach(slot=>{
       if(slot.dataset.bound==='1')return;slot.dataset.bound='1';
       const img=$('img',slot);if(!img)return;
-      img.addEventListener('load',()=>slot.classList.add('is-loaded'),{once:true});
-      img.addEventListener('error',()=>slot.classList.add('is-error'),{once:true});
-      if(img.complete&&img.naturalWidth>0)slot.classList.add('is-loaded');
+      const loaded=()=>{slot.classList.add('is-loaded');slot.classList.remove('is-error')};
+      const failed=()=>{slot.classList.add('is-error');slot.classList.remove('is-loaded')};
+      img.addEventListener('load',loaded,{once:true});
+      img.addEventListener('error',failed,{once:true});
+      if(img.complete){img.naturalWidth>0?loaded():failed()}
     });
   }
 
@@ -44,16 +46,22 @@
   }
 
   async function renderHomeAccounts(){
-    const hero=$('.balance-hero');if(!hero||!window.FinanceDB)return;
+    const hero=$('.balance-hero');
+    if(!hero||typeof FinanceDB==='undefined')return;
     try{
       const accounts=await FinanceDB.getAll('accounts');
       const {intesa,postepay,xme}=findAccounts(accounts);
-      hero.classList.add('v17-account-hero');
-      hero.innerHTML=`<div class="v17-accounts-head"><div><small>I TUOI SOLDI</small><h2>Disponibilità</h2></div><button class="v17-all-accounts" type="button" data-v17-open-accounts>Vedi conti</button></div>
+      hero.className='balance-hero v17-account-hero';
+      hero.innerHTML=`
+        <div class="v17-legacy" aria-hidden="true">
+          <span id="totalLiquidity">€ 0,00</span><span id="protectedLiquidity">Protetti € 0,00</span><span id="ordinaryLiquidity">Disponibili € 0,00</span><span id="snapshotChip">Locale</span>
+        </div>
+        <div class="v17-accounts-head"><div><small>I TUOI SOLDI</small><h2>Disponibilità</h2></div><button class="v17-all-accounts" type="button" data-v17-open-accounts>Vedi conti</button></div>
         <div class="v17-bank-grid">${card(intesa,'intesa','Intesa Sanpaolo')}${card(postepay,'postepay','Postepay')}</div>
         ${xme?`<button class="v17-protected" type="button" data-v17-go-account="${xme.id}"><span class="v17-lock" role="img" aria-label="Protetto">🔐</span><span><small>XME PROTETTO</small><strong>${money(xme.balance)}</strong><em>Riserva separata · non disponibile per le spese</em></span></button>`:''}`;
       attachLogoFallback(hero);
-    }catch(e){console.warn('V17 home accounts',e)}
+      hero.dataset.accountFirst='1';
+    }catch(e){console.warn('Account-first home',e)}
   }
 
   function decorateAccountList(){
@@ -70,16 +78,18 @@
     });
   }
 
-  function schedule(){clearTimeout(timer);timer=setTimeout(()=>{renderHomeAccounts();decorateAccountList()},80)}
+  function schedule(){clearTimeout(timer);timer=setTimeout(()=>{renderHomeAccounts();decorateAccountList()},70)}
   document.addEventListener('click',e=>{
     const open=e.target.closest('[data-v17-open-accounts],[data-v17-go-account]');if(!open)return;
     e.preventDefault();document.querySelector('.tab[data-view="accounts"]')?.click();
   },true);
+
   document.addEventListener('DOMContentLoaded',()=>{
     renderHomeAccounts();decorateAccountList();
     const list=$('#accountsList');if(list)new MutationObserver(schedule).observe(list,{childList:true,subtree:true,characterData:true});
-    const total=$('#totalLiquidity');if(total)new MutationObserver(schedule).observe(total,{childList:true,characterData:true,subtree:true});
+    const dash=$('#view-dashboard');if(dash)new MutationObserver(()=>{if(!$('.balance-hero')?.dataset.accountFirst)schedule()}).observe(dash,{childList:true,subtree:false});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
-    setTimeout(schedule,400);setTimeout(schedule,1200);
+    window.addEventListener('pageshow',schedule,{passive:true});
+    setTimeout(schedule,250);setTimeout(schedule,900);setTimeout(schedule,1800);
   });
 })();
