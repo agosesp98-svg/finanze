@@ -1,4 +1,4 @@
-const CACHE='finanze-pwa-v19';
+const CACHE='finanze-pwa-v21';
 const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 const COMBINED_JS=['./app-v7.js?v=10','./quickadd-fix-v12.js','./experience-v13.js','./experience-v14.js','./self-heal-v19.js'];
 const COMBINED_CSS=['./experience-v9.css?v=10','./experience-v13.css','./experience-v14.css'];
