@@ -28,6 +28,7 @@
   }
 
   function organizeHome(){
+    if(document.body.classList.contains('v28-ui'))return;
     const dash=$('#view-dashboard');if(!dash)return;
     document.body.classList.add('v23-organized');
 
@@ -105,7 +106,6 @@
 
   document.addEventListener('DOMContentLoaded',()=>{
     organize();
-    // Delayed passes only: no broad MutationObserver, which could retrigger itself while moving Home cards.
     setTimeout(organize,120);
     setTimeout(organize,500);
     setTimeout(organize,1200);
