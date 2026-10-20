@@ -16,6 +16,12 @@
     return active.id.replace(/^view-/,'');
   }
 
+  function setSystemChrome(){
+    $$('meta[name="theme-color"]').forEach(meta=>meta.setAttribute('content','#0b0b0c'));
+    const status=$('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if(status)status.setAttribute('content','black-translucent');
+  }
+
   function ensureHeaderContext(){
     const title=$('#pageTitle');if(!title)return;
     let p=$('#pageContext');
@@ -73,7 +79,7 @@
 
   function sync(){
     document.body.classList.add('v27-ui');
-    ensureHeaderContext();markCurrentTab();nameHome();enhanceRegions();arrangePlan();improveRates();
+    setSystemChrome();ensureHeaderContext();markCurrentTab();nameHome();enhanceRegions();arrangePlan();improveRates();
   }
 
   document.addEventListener('click',e=>{
