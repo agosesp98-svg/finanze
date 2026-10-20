@@ -1,7 +1,7 @@
-const CACHE='finanze-pwa-v21';
+const CACHE='finanze-pwa-v22';
 const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
-const COMBINED_JS=['./app-v7.js?v=10','./quickadd-fix-v12.js','./experience-v13.js','./experience-v14.js','./self-heal-v19.js'];
-const COMBINED_CSS=['./experience-v9.css?v=10','./experience-v13.css','./experience-v14.css'];
+const COMBINED_JS=['./app-v7.js?v=10','./quickadd-fix-v12.js','./experience-v13.js','./experience-v14.js','./self-heal-v19.js','./marriage-v22.js'];
+const COMBINED_CSS=['./experience-v9.css?v=10','./experience-v13.css','./experience-v14.css','./marriage-v22.css'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(CORE.map(async p=>{try{const r=await fetch(p,{cache:'no-store'});if(r.ok)await c.put(p,r.clone())}catch{}}))));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('finanze-pwa')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
 self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();});
