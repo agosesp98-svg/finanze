@@ -1,0 +1,27 @@
+/* V31 monthly feasibility planner */
+.v31-plan{margin:0 0 14px;padding:18px;border-radius:28px;background:#1b1b1d;color:#f7f7f5;border:1px solid #343437}
+.v31-plan-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:16px}
+.v31-plan-head small{display:block;font-size:11px;line-height:1.2;letter-spacing:.08em;font-weight:800;color:#b8b8b4}
+.v31-plan-head h2{margin:3px 0 0;font-size:22px;line-height:1.05;letter-spacing:-.035em;color:#fff}
+#v31PlanStatus{min-height:34px;padding:8px 11px;border-radius:999px;background:#303033;color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center}
+#v31PlanStatus.good{background:#9bf35b;color:#111}
+#v31PlanStatus.danger{background:#ffe94a;color:#111}
+.v31-plan-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.v31-plan-grid>div{padding:14px;border-radius:20px;background:#242426;min-height:78px}
+.v31-plan-grid>div.wide{grid-column:1/-1;background:#9bf35b;color:#111}
+.v31-plan-grid small{display:block;font-size:10px;line-height:1.2;letter-spacing:.06em;font-weight:800;color:#b8b8b4}
+.v31-plan-grid .wide small{color:#314127}
+.v31-plan-grid strong{display:block;margin-top:8px;font-size:23px;line-height:1;font-weight:800;letter-spacing:-.04em}
+.v31-goals{margin-top:14px;display:grid;gap:8px}
+.v31-goals>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-top:1px solid #38383b}
+.v31-goals span{min-width:0}
+.v31-goals b{display:block;font-size:15px;color:#fff}
+.v31-goals small{display:block;margin-top:3px;font-size:12px;line-height:1.3;color:#b8b8b4}
+.v31-goals strong{font-size:15px;color:#fff;white-space:nowrap}
+.v31-gap{margin-top:14px;padding:14px;border-radius:20px;background:#242426}
+.v31-gap strong,.v31-gap span{display:block}
+.v31-gap strong{font-size:14px;line-height:1.25;color:#fff}
+.v31-gap span{margin-top:5px;font-size:12px;line-height:1.4;color:#d1d1ce}
+.v31-gap.danger{background:#3a2f12;border:1px solid #6f5a18}
+.v31-gap.good{background:#173019;border:1px solid #2f6933}
+@media (prefers-reduced-motion:reduce){.v31-plan *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
