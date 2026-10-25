@@ -1,7 +1,7 @@
-const CACHE='finanze-pwa-v30';
-const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./ui-v26.css?v=26','./ui-v28.css?v=28','./ui-v28.js?v=28','./ui-v28-planfix.js?v=28','./budget-v29.js','./budget-v29.css','./goals-v30.js'];
-const COMBINED_JS=['./app-v7.js?v=10','./quickadd-fix-v12.js','./experience-v13.js','./experience-v14.js','./self-heal-v19.js','./marriage-v22.js','./organize-v23.js?v=24','./ui-v28-planfix.js?v=28','./budget-v29.js','./goals-v30.js'];
-const COMBINED_CSS=['./experience-v9.css?v=10','./experience-v13.css','./experience-v14.css','./marriage-v22.css','./organize-v23.css?v=25','./budget-v29.css'];
+const CACHE='finanze-pwa-v31';
+const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./ui-v26.css?v=26','./ui-v28.css?v=28','./ui-v28.js?v=28','./ui-v28-planfix.js?v=28','./budget-v29.js','./budget-v29.css','./goals-v30.js','./planner-v31.js','./planner-v31.css'];
+const COMBINED_JS=['./app-v7.js?v=10','./quickadd-fix-v12.js','./experience-v13.js','./experience-v14.js','./self-heal-v19.js','./marriage-v22.js','./organize-v23.js?v=24','./ui-v28-planfix.js?v=28','./budget-v29.js','./goals-v30.js','./planner-v31.js'];
+const COMBINED_CSS=['./experience-v9.css?v=10','./experience-v13.css','./experience-v14.css','./marriage-v22.css','./organize-v23.css?v=25','./budget-v29.css','./planner-v31.css'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(CORE.map(async p=>{try{const r=await fetch(p,{cache:'no-store'});if(r.ok)await c.put(p,r.clone())}catch{}}))));self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('finanze-pwa')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
 self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();});
