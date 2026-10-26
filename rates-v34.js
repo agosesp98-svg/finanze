@@ -11,6 +11,77 @@
 
   if(typeof FinanceDB==='undefined')return;
 
+  const rawAdd=FinanceDB.add.bind(FinanceDB);
+  const rawPut=FinanceDB.put.bind(FinanceDB);
+
+  async function linkedLiability(value){
+    if(!value||(!value.liabilityId&&!value.liabilityKey))return null;
+    const liabilities=await FinanceDB.getAll('liabilities');
+    return liabilities.find(l=>Number(l.id)===Number(value.liabilityId)||(value.liabilityKey&&l.scheduleKey===value.liabilityKey))||null;
+  }
+
+  async function ensureBalloon(liability){
+    if(!liability?.finalPaymentDate||!Number(liability.finalPayment||0))return;
+    const commitments=await FinanceDB.getAll('commitments');
+    const exists=commitments.some(c=>c.active!==false&&String(c.dueDate)===String(liability.finalPaymentDate)&&(
+      Number(c.liabilityId)===Number(liability.id)||(liability.scheduleKey&&c.liabilityKey===liability.scheduleKey)
+    )&&Number(c.amount||0)===Number(liability.finalPayment||0));
+    if(exists)return;
+    await rawAdd('commitments',{
+      name:`Pagamento finale`,
+      amount:Number(liability.finalPayment||0),
+      dueDate:liability.finalPaymentDate,
+      cadence:'Una tantum',
+      estimated:false,
+      active:true,
+      recurring:false,
+      generated:true,
+      liabilityId:liability.id,
+      liabilityKey:liability.scheduleKey||'',
+      note:'Pagamento finale collegato al finanziamento'
+    });
+  }
+
+  FinanceDB.put=async(store,value)=>{
+    if(store==='liabilities'&&value){
+      const noFinalBalloon=!Number(value.finalPayment||0);
+      const byInstallments=value.installmentsRemaining!=null&&Number(value.installmentsRemaining)<=0;
+      const byResidual=value.remaining!=null&&Number(value.remaining)<=0;
+      if(noFinalBalloon&&(byInstallments||byResidual))value.completed=true;
+
+      if(value.recurrenceEnd&&value.nextDueDate&&String(value.nextDueDate)>String(value.recurrenceEnd)&&Number(value.finalPayment||0)>0){
+        value.regularMonthly=value.regularMonthly??value.monthly;
+        value.monthly=0;
+        value.monthlyPhaseComplete=true;
+        value.nextDueDate=value.finalPaymentDate||'';
+        await ensureBalloon(value);
+      }
+      if(value.monthlyPhaseComplete&&value.finalPaymentDate&&value.nextDueDate&&String(value.nextDueDate)>String(value.finalPaymentDate)){
+        value.completed=true;
+        value.nextDueDate='';
+      }
+    }
+    return rawPut(store,value);
+  };
+
+  FinanceDB.add=async(store,value)=>{
+    if(store==='commitments'&&value&&(value.liabilityId||value.liabilityKey)){
+      const liability=await linkedLiability(value);
+      if(liability){
+        if(liability.completed)return 0;
+        if(liability.recurrenceEnd&&value.dueDate&&String(value.dueDate)>String(liability.recurrenceEnd)){
+          const isBalloon=liability.finalPaymentDate&&String(value.dueDate)===String(liability.finalPaymentDate)&&Number(value.amount||0)===Number(liability.finalPayment||0);
+          if(!isBalloon){
+            await ensureBalloon(liability);
+            return 0;
+          }
+        }
+        if(liability.finalDueDate&&value.dueDate&&String(value.dueDate)>String(liability.finalDueDate))return 0;
+      }
+    }
+    return rawAdd(store,value);
+  };
+
   function decodeBase64Url(value){
     try{
       const normalized=String(value||'').replace(/-/g,'+').replace(/_/g,'/');
@@ -76,6 +147,10 @@
       const byResidual=l.remaining!=null&&Number(l.remaining)<=0;
       if(noFinalBalloon&&(byInstallments||byResidual)){
         l.completed=true;
+        await FinanceDB.put('liabilities',l);
+        changed=true;
+      }
+      if(l.recurrenceEnd&&l.nextDueDate&&String(l.nextDueDate)>String(l.recurrenceEnd)&&Number(l.finalPayment||0)>0){
         await FinanceDB.put('liabilities',l);
         changed=true;
       }
