@@ -73,6 +73,29 @@ async function main(){
   }
 
   {
+    const snapshot={
+      accounts:[],
+      budgets:[{id:1,name:'Budget A',targetBudget:400},{id:2,name:'Budget B',targetBudget:130}],
+      liabilities:[{id:1,name:'Rate',monthly:352.91,completed:false,completedInstallments:1,nextDueDate:'2026-11-01'}],
+      commitments:[{id:1,name:'Ricorrenti',amount:187.54,dueDate:'2026-11-01',cadence:'Mensile',recurring:true,active:true}],
+      goals:[],settings
+    };
+    const b=E.monthBreakdown(snapshot,'2026-10',now);
+    assert.equal(b.salaryNet,1500);
+    assert.equal(b.budgetTotal,530);
+    assert.equal(b.rateTotal,352.91);
+    assert.equal(b.recurringTotal,187.54);
+    assert.equal(b.fixedTotal,540.45);
+    assert.equal(b.plannedOutflow,1070.45);
+    assert.equal(b.capacity,429.55);
+    const p=E.projection(snapshot,1,now)[0];
+    assert.equal(p.monthlyBudget,b.budgetTotal);
+    assert.equal(p.rateTotal,b.rateTotal);
+    assert.equal(p.recurringTotal,b.recurringTotal);
+    assert.equal(p.capacity,b.capacity,'proiezione e dettaglio mensile devono usare la stessa fonte');
+  }
+
+  {
     assert.equal(E.salaryDate([{key:'salaryDay',value:10}],new Date(2026,9,26,12)),'2026-11-10');
     assert.equal(E.cycleStart([{key:'salaryDay',value:10}],new Date(2026,9,26,12)),'2026-10-10');
   }
