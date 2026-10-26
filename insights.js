@@ -14,35 +14,7 @@
     return Object.fromEntries(STORES.map((s,i)=>[s,values[i]||[]]));
   }
   function setting(s,key,fallback=null){return s.settings.find(x=>x.key===key)?.value??fallback}
-
-  function recurringItems(commitments=[]){
-    const map=new Map();
-    for(const c of commitments){
-      if(c.liabilityId||c.liabilityKey)continue;
-      const cadence=norm(c.cadence);
-      if(!(c.recurring===true||cadence.includes('mensil')||cadence.includes('14 giorni')||cadence.includes('settiman')))continue;
-      const key=norm(c.name);if(!key)continue;
-      const old=map.get(key);
-      if(!old||String(c.dueDate||'')>String(old.dueDate||''))map.set(key,c);
-    }
-    return [...map.values()];
-  }
-
-  function breakdownForMonth(s,key){
-    const rates=s.liabilities.filter(l=>{
-      if(l.completed||Number(l.monthly||0)<=0)return false;
-      let start='';
-      if(l.firstDueDate)start=monthKey(l.firstDueDate);
-      else if(Number(l.completedInstallments||0)<=0&&l.nextDueDate)start=monthKey(l.nextDueDate);
-      const end=monthKey(l.recurrenceEnd||l.finalDueDate||'');
-      if(start&&key<start)return false;
-      if(end&&key>end)return false;
-      return true;
-    }).map(l=>({name:l.name,amount:Number(l.monthly||0)}));
-    const recurring=recurringItems(s.commitments).filter(c=>!c.firstDueDate||key>=monthKey(c.firstDueDate)).map(c=>({name:c.name,amount:FinanceEngine.monthlyEquivalent(c)}));
-    const rateTotal=rates.reduce((sum,x)=>sum+x.amount,0),recurringTotal=recurring.reduce((sum,x)=>sum+x.amount,0);
-    return{rates,recurring,rateTotal,recurringTotal,total:rateTotal+recurringTotal};
-  }
+  function breakdownForMonth(s,key){return FinanceEngine.monthBreakdown(s,key)}
 
   function roles(s){
     const ordinary=s.accounts.filter(a=>!a.protected);
@@ -62,10 +34,10 @@
 
   function allocationPlan(s,amount){
     const m=FinanceEngine.calculate(s),b=breakdownForMonth(s,monthKey(FinanceEngine.iso(new Date()))),r=roles(s);
-    const budget=Math.min(Math.max(0,amount),m.monthlyBudget);
-    const fixed=Math.min(Math.max(0,amount-budget),b.total);
+    const budget=Math.min(Math.max(0,amount),b.budgetTotal);
+    const fixed=Math.min(Math.max(0,amount-budget),b.fixedTotal);
     const goal=Math.max(0,amount-budget-fixed);
-    return{model:m,breakdown:b,roles:r,amount,budget,fixed,goal,shortfall:Math.max(0,m.monthlyBudget+b.total-amount)};
+    return{model:m,breakdown:b,roles:r,amount,budget,fixed,goal,shortfall:Math.max(0,b.plannedOutflow-amount)};
   }
 
   function replaceFixedRows(card,b){
@@ -73,7 +45,7 @@
     const existing=$('[data-fixed-breakdown]',list);if(existing)return;
     const row=[...list.children].find(x=>norm(x.textContent).includes('rate e spese fisse'));
     if(!row)return;
-    row.outerHTML=`<div data-fixed-breakdown><div class="allocation-row"><span>Rate</span><strong>${money0(b.rateTotal)}</strong></div><div class="allocation-row"><span>Abbonamenti e ricorrenti</span><strong>${money0(b.recurringTotal)}</strong></div><div class="allocation-row fixed"><span>Totale fisso</span><strong>${money0(b.total)}</strong></div></div>`;
+    row.outerHTML=`<div data-fixed-breakdown><div class="allocation-row"><span>Rate</span><strong>${money0(b.rateTotal)}</strong></div><div class="allocation-row"><span>Abbonamenti e ricorrenti</span><strong>${money0(b.recurringTotal)}</strong></div><div class="allocation-row fixed"><span>Totale fisso</span><strong>${money0(b.fixedTotal)}</strong></div></div>`;
   }
 
   function replacePlanSummary(host,b){
@@ -82,7 +54,7 @@
     if(!label)return;
     const value=label.nextElementSibling;if(!value)return;
     label.textContent='Rate';value.textContent=`− ${money(b.rateTotal)}`;
-    value.insertAdjacentHTML('afterend',`<span data-fixed-summary>Abbonamenti e ricorrenti</span><strong data-fixed-summary>− ${money(b.recurringTotal)}</strong><span data-fixed-summary>Totale fisso</span><strong data-fixed-summary>− ${money(b.total)}</strong>`);
+    value.insertAdjacentHTML('afterend',`<span data-fixed-summary>Abbonamenti e ricorrenti</span><strong data-fixed-summary>− ${money(b.recurringTotal)}</strong><span data-fixed-summary>Totale fisso</span><strong data-fixed-summary>− ${money(b.fixedTotal)}</strong>`);
   }
 
   async function enhanceFinancialViews(){
@@ -92,7 +64,7 @@
       const summary=$('#planSummary');if(summary)replacePlanSummary(summary,b);
       const rows=$$('#projectionList .projection-row'),projection=FinanceEngine.projection(s,6);
       rows.forEach((row,i)=>{
-        const p=projection[i];if(!p)return;const x=breakdownForMonth(s,p.month),spans=$$('span',row);if(spans[0])spans[0].textContent=`Rate ${money0(x.rateTotal)} · Ricorrenti ${money0(x.recurringTotal)} · Totale ${money0(x.total)}`;
+        const p=projection[i];if(!p)return;const spans=$$('span',row);if(spans[0])spans[0].textContent=`Budget ${money0(p.monthlyBudget)} · Rate ${money0(p.rateTotal)} · Ricorrenti ${money0(p.recurringTotal)}`;
       });
       const heading=$$('#view-plan .section-title h2').find(h=>norm(h.textContent)==='come cambia il margine');if(heading)heading.textContent='Prossimi mesi';
     }catch(err){console.error('Insights UI',err)}
@@ -125,7 +97,7 @@
     const primaryLabel=r.primary?(Number(r.primary.id)===Number(salaryAccountId)?`Lascia su ${esc(r.primary.name)}`:`Porta su ${esc(r.primary.name)}`):'Rate e ricorrenti';
     const goalLabel=r.goal?`Sposta su ${esc(r.goal.name)}${goal?` per ${esc(goal.name)}`:''}`:`Accantona${goal?` per ${esc(goal.name)}`:' per l’obiettivo'}`;
     $('#sheetTitle').textContent='Distribuisci lo stipendio';
-    $('#sheetBody').innerHTML=`<div class="sheet-section"><h3>${money(plan.amount)} ricevuti</h3><p class="helper">Questa è la ripartizione consigliata del nuovo stipendio.</p><div class="allocation-list"><div class="allocation-row"><span>${spendingLabel}</span><strong>${money(plan.budget)}</strong></div><div class="allocation-row"><span>${primaryLabel}</span><strong>${money(plan.fixed)}</strong></div><div class="allocation-row fixed"><span>${goalLabel}</span><strong>${money(plan.goal)}</strong></div></div>${plan.shortfall>0?`<div class="month-note danger">Lo stipendio non copre il piano mensile per ${money(plan.shortfall)}.</div>`:''}</div><div class="sheet-section"><h3>Cosa resta sul conto</h3><div class="allocation-list"><div class="allocation-row"><span>Rate</span><strong>${money(b.rateTotal)}</strong></div><div class="allocation-row"><span>Abbonamenti e ricorrenti</span><strong>${money(b.recurringTotal)}</strong></div><div class="allocation-row fixed"><span>Totale fisso</span><strong>${money(b.total)}</strong></div></div><p class="helper">È una guida: l’app non sposta denaro automaticamente.</p></div>`;
+    $('#sheetBody').innerHTML=`<div class="sheet-section"><h3>${money(plan.amount)} ricevuti</h3><p class="helper">Questa è la ripartizione consigliata del nuovo stipendio, calcolata dallo stesso piano usato nel resto dell’app.</p><div class="allocation-list"><div class="allocation-row"><span>${spendingLabel}</span><strong>${money(plan.budget)}</strong></div><div class="allocation-row"><span>${primaryLabel}</span><strong>${money(plan.fixed)}</strong></div><div class="allocation-row fixed"><span>${goalLabel}</span><strong>${money(plan.goal)}</strong></div></div>${plan.shortfall>0?`<div class="month-note danger">Lo stipendio non copre il piano mensile per ${money(plan.shortfall)}.</div>`:''}</div><div class="sheet-section"><h3>Composizione del mese</h3><div class="allocation-list"><div class="allocation-row"><span>Budget mensili</span><strong>${money(b.budgetTotal)}</strong></div><div class="allocation-row"><span>Rate</span><strong>${money(b.rateTotal)}</strong></div><div class="allocation-row"><span>Abbonamenti e ricorrenti</span><strong>${money(b.recurringTotal)}</strong></div><div class="allocation-row fixed"><span>Totale pianificato</span><strong>${money(b.plannedOutflow)}</strong></div><div class="allocation-row fixed"><span>Margine obiettivi</span><strong>${money(b.capacity)}</strong></div></div><p class="helper">È una guida: l’app non sposta denaro automaticamente.</p></div>`;
     $('#sheetBackdrop').classList.add('open');$('#sheet').classList.add('open');$('#sheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
   }
 
