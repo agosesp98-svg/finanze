@@ -3,194 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0b0b0c">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0b0b0c">
-  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f2f2f7">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+  <meta name="color-scheme" content="light dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=32">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles-v7.css?v=10">
-  <link rel="stylesheet" href="./experience-v8.css?v=10">
-  <link rel="stylesheet" href="./experience-v9.css?v=10">
-  <link rel="stylesheet" href="./safety-v16.css?v=16">
-  <link rel="stylesheet" href="./home-v17.css?v=17">
-  <link rel="stylesheet" href="./ui-v26.css?v=26">
-  <link rel="stylesheet" href="./ui-v28.css?v=28">
+  <link rel="stylesheet" href="./ui-v32.css?v=32">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite">
-    <div class="boot-inner">
-      <div class="boot-mark">€</div>
-      <div class="boot-title">Finanze</div>
-      <div class="boot-copy">Metto in ordine i tuoi numeri…</div>
-      <div class="boot-skeleton"><i></i><i></i><i></i></div>
-    </div>
+    <div class="boot-mark">€</div>
   </div>
 
-  <div id="app" class="app-shell" aria-busy="true">
+  <div class="app" id="app">
     <header class="topbar">
-      <div>
-        <div class="eyebrow">FINANZE</div>
-        <h1 id="pageTitle">Oggi</h1>
-      </div>
+      <div class="brand">Finanze</div>
       <div class="top-actions">
-        <button id="menuBtn" class="round-button" aria-label="Apri menu" data-icon="menu"></button>
-        <button id="quickAddBtn" class="round-button primary-round" aria-label="Aggiungi movimento" data-icon="plus"></button>
+        <button id="settingsBtn" class="icon-button" type="button" aria-label="Impostazioni">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
+        </button>
+        <button id="quickAdd" class="icon-button primary" type="button" aria-label="Aggiungi movimento">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
       </div>
     </header>
 
-    <main id="mainContent" class="content">
-      <section id="view-dashboard" class="view active">
-        <article class="balance-hero">
-          <div class="hero-line"><span>Liquidità totale</span><span id="snapshotChip" class="chip">Locale</span></div>
-          <div id="totalLiquidity" class="balance-value">€ 0,00</div>
-          <div class="hero-foot"><span id="protectedLiquidity">Protetti € 0,00</span><span id="ordinaryLiquidity">Disponibili € 0,00</span></div>
-        </article>
-
-        <button id="spendTodayCard" class="smart-card" type="button">
-          <span class="smart-icon" data-icon="spark"></span>
-          <span class="smart-copy">
-            <small>QUANTO PUOI SPENDERE OGGI?</small>
-            <strong id="spendTodayValue">€ 0,00</strong>
-            <em id="spendTodayText">Calcolo in corso…</em>
-          </span>
-          <span class="chevron" data-icon="chevron"></span>
+    <main>
+      <section id="view-today" class="view active">
+        <div class="page-head"><div><h1>Oggi</h1><p>La situazione che conta adesso.</p></div></div>
+        <div id="todayStatus" class="status-banner" role="alert"></div>
+        <button id="spendCard" class="spend-card" type="button">
+          <div><small id="spendLabel">Puoi spendere</small><strong id="spendValue">€ 0,00</strong></div>
+          <div class="spend-meta"><span id="spendDaily">€ 0 / giorno</span><span id="spendDays">—</span></div>
         </button>
 
-        <div class="metric-grid">
-          <button class="metric-card" data-detail="free" type="button"><small>Libero davvero</small><strong id="freeLiquidity">€ 0,00</strong><span>Oltre budget e scadenze</span></button>
-          <button class="metric-card" data-detail="committed" type="button"><small>Già impegnato</small><strong id="committedAmount">€ 0,00</strong><span>Scadenze pianificate</span></button>
-        </div>
+        <div class="section-title"><h2>I tuoi soldi</h2><button id="accountsSettingsLink" type="button" onclick="document.getElementById('settingsBtn').click()">Gestisci</button></div>
+        <div id="accountsStrip" class="account-scroll" aria-label="Conti"></div>
 
-        <section class="section-card quick-card">
-          <div class="section-title-row"><div><small>AZIONI RAPIDE</small><h2>Cosa vuoi fare?</h2></div></div>
-          <div class="quick-actions">
-            <button data-action="expense"><span data-icon="minusCircle"></span><b>Spesa</b></button>
-            <button data-action="income"><span data-icon="plusCircle"></span><b>Entrata</b></button>
-            <button data-action="transfer"><span data-icon="arrows"></span><b>Trasferisci</b></button>
-            <button data-action="commitment"><span data-icon="calendar"></span><b>Scadenza</b></button>
-          </div>
-        </section>
+        <div class="section-title"><h2>Prossime uscite</h2><button type="button" data-view="plan">Vedi piano</button></div>
+        <div id="upcomingList" class="list-card"></div>
 
-        <section class="section-card">
-          <div class="section-title-row"><div><small>PROSSIMA SCADENZA</small><h2 id="nextCommitmentName">Nessuna scadenza</h2></div><div class="align-right"><strong id="nextCommitmentAmount">—</strong><span id="nextCommitmentDate"></span></div></div>
-          <button class="link-button" data-go="plan">Vedi il piano <span data-icon="chevron"></span></button>
-        </section>
-
-        <section class="section-card">
-          <div class="section-title-row"><div><small>PROSSIMI 30 GIORNI</small><h2>Previsione</h2></div><div class="status-dot"><i></i><span>Aggiornata</span></div></div>
-          <div class="forecast-grid">
-            <div><small>Uscite pianificate</small><strong id="forecastOut">€ 0,00</strong></div>
-            <div><small>Entrate attese</small><strong id="forecastIn">€ 0,00</strong></div>
-            <div class="wide"><small>Dopo le scadenze</small><strong id="forecastAfter">€ 0,00</strong><span>Esclude le spese quotidiane ancora da sostenere.</span></div>
-          </div>
-        </section>
-
-        <section class="section-card">
-          <div class="section-title-row"><div><small>BUDGET</small><h2>Periodo corrente</h2></div><div class="align-right"><strong id="budgetSummary">€ 0,00 / € 0,00</strong><span id="budgetDays"></span></div></div>
-          <div class="progress"><i id="budgetProgress"></i></div>
-          <div class="section-caption" id="budgetRemainingText">Restano € 0,00.</div>
-          <button class="link-button" data-go="budget">Vedi categorie <span data-icon="chevron"></span></button>
-        </section>
-
-        <section class="section-card">
-          <div class="section-title-row"><div><small>OBIETTIVI</small><h2>I tuoi traguardi</h2></div><button class="mini-add" data-action="newGoal" aria-label="Nuovo obiettivo" data-icon="plus"></button></div>
-          <div id="homeGoals" class="home-goals"></div>
-        </section>
-
-        <section class="section-card">
-          <div class="section-title-row"><div><small>ENTRATE ATTESE</small><h2>Da ricevere</h2></div><button class="mini-add" data-action="newExpected" aria-label="Nuova entrata attesa" data-icon="plus"></button></div>
-          <div id="expectedIncomeList" class="list"></div>
-        </section>
-      </section>
-
-      <section id="view-accounts" class="view">
-        <div class="section-head-page"><div><small>CONTI</small><h2>Saldi e disponibilità</h2></div><button class="small-pill" data-action="newAccount">Aggiungi</button></div>
-        <div id="accountsList" class="card-list"></div>
+        <div class="section-title"><h2>Obiettivo prioritario</h2><button type="button" data-view="goals">Tutti</button></div>
+        <div id="primaryGoal"></div>
       </section>
 
       <section id="view-movements" class="view">
-        <div class="section-head-page">
-          <div><small>STORICO</small><h2>Movimenti</h2></div>
-          <div class="movement-actions">
-            <button class="small-pill" data-action="expense">Spesa</button>
-            <button class="small-pill income-pill" data-action="income">Entrata</button>
-          </div>
+        <div class="page-head"><div><h1>Movimenti</h1><p>Dove sono andati i soldi.</p></div></div>
+        <div id="movementFilters" class="segmented" role="tablist" aria-label="Filtra movimenti">
+          <button class="active" type="button" data-filter="all">Tutti</button>
+          <button type="button" data-filter="expense">Uscite</button>
+          <button type="button" data-filter="income">Entrate</button>
+          <button type="button" data-filter="unclassified">Da sistemare</button>
         </div>
-        <div class="segmented" id="movementFilter">
-          <button class="active" data-filter="all">Tutti</button><button data-filter="expense">Uscite</button><button data-filter="income">Entrate</button><button data-filter="transfer">Trasferimenti</button>
-        </div>
-        <div id="movementsList" class="section-card list"></div>
-      </section>
-
-      <section id="view-budget" class="view">
-        <div class="section-head-page"><div><small>BUDGET</small><h2>Spese quotidiane</h2></div></div>
-        <div id="budgetCategories" class="card-list"></div>
+        <div id="unclassifiedNotice" class="notice" hidden></div>
+        <div id="movementList" class="list-card"></div>
       </section>
 
       <section id="view-plan" class="view">
-        <div class="section-head-page"><div><small>PIANO</small><h2>Obiettivi e scadenze</h2></div></div>
-        <section class="section-card">
-          <div class="section-title-row"><div><small>OBIETTIVI</small><h2>Traguardi</h2></div><button class="mini-add" data-action="newGoal" aria-label="Nuovo obiettivo" data-icon="plus"></button></div>
-          <div id="goalsList" class="goal-list"></div>
-        </section>
-        <section class="section-card">
-          <div class="section-title-row"><div><small>SCADENZE</small><h2>Impegni futuri</h2></div><button class="mini-add" data-action="commitment" aria-label="Nuova scadenza" data-icon="plus"></button></div>
-          <div id="commitmentsList" class="list"></div>
-        </section>
-        <section class="section-card">
-          <div class="section-title-row"><div><small>FINANZIAMENTI</small><h2>Rate e debiti</h2></div></div>
-          <div id="liabilitiesList" class="list"></div>
-        </section>
+        <div class="page-head"><div><h1>Piano</h1><p>Cosa deve uscire e quanto puoi destinare.</p></div></div>
+        <div id="planSummary" class="plan-summary"></div>
+
+        <div class="section-title"><h2>Budget</h2><span>Ciclo stipendio</span></div>
+        <div id="budgetList" class="list-card"></div>
+
+        <div class="section-title"><h2>Uscite programmate</h2><button type="button" data-new-commitment>Nuova</button></div>
+        <div id="scheduledList" class="list-card"></div>
+
+        <div class="section-title"><h2>Rate e finanziamenti</h2><span>Monitoraggio</span></div>
+        <div id="liabilityList" class="list-card"></div>
+      </section>
+
+      <section id="view-goals" class="view">
+        <div class="page-head"><div><h1>Obiettivi</h1><p id="goalCapacity">Quanto puoi costruire nel tempo.</p></div><button class="text-button" type="button" data-new-goal>Nuovo</button></div>
+        <div id="goalsList"></div>
       </section>
     </main>
 
     <nav class="tabbar" aria-label="Navigazione principale">
-      <button class="tab active" data-view="dashboard" data-title="Oggi"><span data-icon="home"></span><b>Oggi</b></button>
-      <button class="tab" data-view="accounts" data-title="Conti"><span data-icon="wallet"></span><b>Conti</b></button>
-      <button class="tab" data-view="movements" data-title="Movimenti"><span data-icon="list"></span><b>Movimenti</b></button>
-      <button class="tab" data-view="budget" data-title="Budget"><span data-icon="chart"></span><b>Budget</b></button>
-      <button class="tab" data-view="plan" data-title="Piano"><span data-icon="target"></span><b>Piano</b></button>
+      <button class="tab active" type="button" data-view="today" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9Z"/></svg><span>Oggi</span></button>
+      <button class="tab" type="button" data-view="movements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Movimenti</span></button>
+      <button class="tab" type="button" data-view="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Piano</span></button>
+      <button class="tab" type="button" data-view="goals"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span>Obiettivi</span></button>
     </nav>
   </div>
 
-  <div id="drawerBackdrop" class="overlay" hidden></div>
-  <aside id="drawer" class="drawer" aria-hidden="true">
-    <div class="drawer-top"><div><small>FINANZE</small><h2>Gestione</h2></div><button class="round-button" data-close="drawer" aria-label="Chiudi" data-icon="close"></button></div>
-    <div class="drawer-group">
-      <button data-action="salaryDate"><span data-icon="calendar"></span><div><strong>Prossimo stipendio</strong><small id="drawerSalaryText">Non impostato</small></div><i data-icon="chevron"></i></button>
-      <button data-action="backup"><span data-icon="download"></span><div><strong>Esporta backup</strong><small>Salva una copia dei dati</small></div><i data-icon="chevron"></i></button>
-      <label class="drawer-file"><span data-icon="upload"></span><div><strong>Importa backup</strong><small>Ripristina un file JSON</small></div><i data-icon="chevron"></i><input id="importBackupInput" type="file" accept=".json,application/json" hidden></label>
-    </div>
-    <div class="drawer-group">
-      <button data-action="reset" class="danger-row"><span data-icon="trash"></span><div><strong>Reset dati locali</strong><small>Operazione irreversibile</small></div><i data-icon="chevron"></i></button>
-    </div>
-    <p class="privacy-note">I dati finanziari restano sul tuo dispositivo. GitHub ospita solo il codice dell’app.</p>
-  </aside>
-
-  <div id="sheetBackdrop" class="overlay" hidden></div>
-  <section id="sheet" class="sheet" aria-hidden="true">
-    <div class="grabber"></div>
-    <div class="sheet-head"><div><small id="sheetKicker">DETTAGLIO</small><h2 id="sheetTitle">Dettaglio</h2></div><button class="round-button" data-close="sheet" aria-label="Chiudi" data-icon="close"></button></div>
-    <div id="sheetBody"></div>
+  <div id="sheetBackdrop" class="sheet-backdrop"></div>
+  <section id="sheet" class="sheet" aria-hidden="true" aria-modal="true" role="dialog">
+    <div class="sheet-grabber"></div>
+    <div class="sheet-head"><h2 id="sheetTitle">Dettaglio</h2><button class="icon-button" type="button" data-close-sheet aria-label="Chiudi">×</button></div>
+    <div id="sheetBody" class="sheet-body"></div>
   </section>
 
-  <div id="lockScreen" class="lock-screen" hidden>
-    <div class="lock-card"><div class="lock-mark">€</div><h2>Finanze</h2><p></p><input id="pinInput" inputmode="numeric" maxlength="6"><button id="unlockBtn" class="primary-button">Continua</button><small id="pinError"></small></div>
-  </div>
-  <div id="toast" class="toast" hidden></div>
+  <input id="backupInput" type="file" accept="application/json,.json" hidden>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=10"></script>
-  <script src="./app-v7.js?v=10"></script>
-  <script src="./experience-v8.js?v=10"></script>
-  <script src="./experience-v9.js?v=10"></script>
-  <script src="./safety-v16.js?v=16"></script>
-  <script src="./home-v17.js?v=17"></script>
-  <script src="./ui-v28.js?v=28"></script>
+  <script src="./db.js?v=32"></script>
+  <script src="./app-v32.js?v=32"></script>
 </body>
 </html>
