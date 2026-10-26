@@ -1,0 +1,28 @@
+.v33-month-card{margin:14px 0 0;background:var(--surface);border-radius:var(--radius-xl);padding:18px;box-shadow:0 1px 0 var(--separator)}
+.v33-month-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:14px;border-bottom:1px solid var(--separator)}
+.v33-month-head small{display:block;color:var(--secondary);font-size:12px;font-weight:750;letter-spacing:.04em}
+.v33-month-head h2{margin:3px 0 0;font-size:24px;line-height:1.05;letter-spacing:-.035em}
+.v33-month-head>strong{font-size:30px;letter-spacing:-.045em;white-space:nowrap}
+.v33-allocation-list{display:grid;gap:0;padding:6px 0}
+.v33-allocation-row{display:flex;justify-content:space-between;align-items:center;gap:16px;min-height:44px;border-bottom:1px solid var(--separator);font-size:15px}
+.v33-allocation-row:last-child{border-bottom:0}
+.v33-allocation-row span{color:var(--secondary)}
+.v33-allocation-row strong{font-size:16px}
+.v33-allocation-row.fixed{margin-top:4px;padding-top:4px}
+.v33-allocation-row.fixed span,.v33-allocation-row.fixed strong{color:var(--text);font-weight:700}
+.v33-month-result{margin-top:10px;padding:16px;border-radius:18px;background:var(--green-soft);color:var(--green);display:flex;align-items:center;justify-content:space-between;gap:14px}
+.v33-month-result span{font-size:14px;font-weight:700;max-width:60%}
+.v33-month-result strong{font-size:28px;letter-spacing:-.04em;white-space:nowrap}
+.v33-month-note{margin-top:10px;border-radius:14px;padding:11px 12px;font-size:13px;line-height:1.4}
+.v33-month-note.warning{background:var(--orange-soft);color:var(--orange)}
+.v33-month-note.danger{background:var(--red-soft);color:var(--red)}
+.v33-month-note.success{background:var(--green-soft);color:var(--green)}
+.v33-plan-link{width:100%;border:0;background:none;color:var(--blue);min-height:44px;margin-top:6px;padding:4px 0 0;display:flex;justify-content:space-between;align-items:center;font-size:14px;font-weight:700;text-align:left}
+.v33-category-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.v33-category-chips button{min-height:36px;border:0;border-radius:999px;padding:7px 11px;background:var(--surface-3);color:var(--text);font-size:13px;font-weight:650}
+.v33-category-chips button span{color:var(--secondary);margin-left:4px}
+.v33-category-add{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.v33-category-add input{min-width:0;width:100%;height:46px;border:1px solid var(--separator);border-radius:12px;background:var(--surface);color:var(--text);padding:0 12px}
+.v33-category-add .secondary-button{min-width:96px}
+.v33-empty-inline{color:var(--secondary);font-size:13px;min-height:36px;display:flex;align-items:center}
+@media(max-width:370px){.v33-month-head>strong{font-size:26px}.v33-month-result strong{font-size:24px}.v33-month-result span{max-width:55%}}
