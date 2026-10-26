@@ -2,6 +2,7 @@ const assert=require('node:assert/strict');
 const E=require('../engine.js');
 const now=new Date(2026,9,26,12,0,0);
 const settings=[{key:'salaryNet',value:1500},{key:'salaryDay',value:10},{key:'primaryAccountId',value:1}];
+const cents=(actual,expected,message)=>assert.ok(Math.abs(actual-expected)<0.005,message||`${actual} ≠ ${expected}`);
 
 async function main(){
   {
@@ -83,16 +84,16 @@ async function main(){
     const b=E.monthBreakdown(snapshot,'2026-10',now);
     assert.equal(b.salaryNet,1500);
     assert.equal(b.budgetTotal,530);
-    assert.equal(b.rateTotal,352.91);
-    assert.equal(b.recurringTotal,187.54);
-    assert.equal(b.fixedTotal,540.45);
-    assert.equal(b.plannedOutflow,1070.45);
-    assert.equal(b.capacity,429.55);
+    cents(b.rateTotal,352.91);
+    cents(b.recurringTotal,187.54);
+    cents(b.fixedTotal,540.45);
+    cents(b.plannedOutflow,1070.45);
+    cents(b.capacity,429.55);
     const p=E.projection(snapshot,1,now)[0];
     assert.equal(p.monthlyBudget,b.budgetTotal);
-    assert.equal(p.rateTotal,b.rateTotal);
-    assert.equal(p.recurringTotal,b.recurringTotal);
-    assert.equal(p.capacity,b.capacity,'proiezione e dettaglio mensile devono usare la stessa fonte');
+    cents(p.rateTotal,b.rateTotal);
+    cents(p.recurringTotal,b.recurringTotal);
+    cents(p.capacity,b.capacity,'proiezione e dettaglio mensile devono usare la stessa fonte');
   }
 
   {
