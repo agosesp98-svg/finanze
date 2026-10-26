@@ -1,17 +1,67 @@
-const CACHE='finanze-pwa-v31';
-const CORE=['./','./index.html','./manifest.webmanifest','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png','./ui-v26.css?v=26','./ui-v28.css?v=28','./ui-v28.js?v=28','./ui-v28-planfix.js?v=28','./budget-v29.js','./budget-v29.css','./goals-v30.js','./planner-v31.js','./planner-v31.css'];
-const COMBINED_JS=['./app-v7.js?v=10','./quickadd-fix-v12.js','./experience-v13.js','./experience-v14.js','./self-heal-v19.js','./marriage-v22.js','./organize-v23.js?v=24','./ui-v28-planfix.js?v=28','./budget-v29.js','./goals-v30.js','./planner-v31.js'];
-const COMBINED_CSS=['./experience-v9.css?v=10','./experience-v13.css','./experience-v14.css','./marriage-v22.css','./organize-v23.css?v=25','./budget-v29.css','./planner-v31.css'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(CORE.map(async p=>{try{const r=await fetch(p,{cache:'no-store'});if(r.ok)await c.put(p,r.clone())}catch{}}))));self.skipWaiting();});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('finanze-pwa')&&k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim();});
-self.addEventListener('message',e=>{if(e.data?.type==='SKIP_WAITING')self.skipWaiting();});
-async function networkFirst(req,key=req){const cache=await caches.open(CACHE);try{const r=await fetch(req,{cache:'no-store'});if(r&&r.ok)await cache.put(key,r.clone());return r}catch{const c=await cache.match(key);if(c)return c;throw new Error('offline')}}
-async function part(path){const cache=await caches.open(CACHE);try{const r=await fetch(path,{cache:'no-store'});if(r&&r.ok){await cache.put(path,r.clone());return await r.text()}}catch{}const c=await cache.match(path);return c?await c.text():''}
-async function combined(paths,type){const chunks=[];for(const p of paths)chunks.push(await part(p));return new Response(chunks.join('\n'),{headers:{'Content-Type':type,'Cache-Control':'no-store'}})}
-self.addEventListener('fetch',e=>{if(e.request.method!=='GET')return;const u=new URL(e.request.url);if(u.origin!==location.origin)return;
-  if(e.request.mode==='navigate'){e.respondWith(networkFirst(e.request,'./index.html'));return;}
-  if(u.pathname.endsWith('/app-v7.js')){e.respondWith(combined(COMBINED_JS,'application/javascript; charset=utf-8'));return;}
-  if(u.pathname.endsWith('/experience-v9.css')){e.respondWith(combined(COMBINED_CSS,'text/css; charset=utf-8'));return;}
-  if(/\.(?:js|css|json|webmanifest)$/i.test(u.pathname)){e.respondWith(networkFirst(e.request));return;}
-  e.respondWith(caches.match(e.request).then(c=>c||fetch(e.request).then(r=>{if(r&&r.ok){const copy=r.clone();caches.open(CACHE).then(cache=>cache.put(e.request,copy));}return r;})));
+const CACHE='finanze-pwa-v32';
+const CORE=[
+  './',
+  './index.html',
+  './manifest.webmanifest?v=32',
+  './ui-v32.css?v=32',
+  './db.js?v=32',
+  './app-v32.js?v=32',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png'
+];
+
+self.addEventListener('install',event=>{
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate',event=>{
+  event.waitUntil(
+    caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+  );
+  self.clients.claim();
+});
+
+self.addEventListener('message',event=>{
+  if(event.data?.type==='SKIP_WAITING')self.skipWaiting();
+});
+
+async function networkFirst(request,fallbackKey=request){
+  const cache=await caches.open(CACHE);
+  try{
+    const response=await fetch(request,{cache:'no-store'});
+    if(response&&response.ok)await cache.put(fallbackKey,response.clone());
+    return response;
+  }catch(error){
+    const cached=await cache.match(fallbackKey);
+    if(cached)return cached;
+    throw error;
+  }
+}
+
+self.addEventListener('fetch',event=>{
+  if(event.request.method!=='GET')return;
+  const url=new URL(event.request.url);
+  if(url.origin!==location.origin)return;
+
+  if(event.request.mode==='navigate'){
+    event.respondWith(networkFirst(event.request,'./index.html'));
+    return;
+  }
+
+  if(/\.(?:js|css|json|webmanifest)$/i.test(url.pathname)){
+    event.respondWith(networkFirst(event.request));
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then(cached=>cached||fetch(event.request).then(response=>{
+      if(response&&response.ok){
+        const copy=response.clone();
+        caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+      }
+      return response;
+    }))
+  );
 });
