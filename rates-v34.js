@@ -49,16 +49,15 @@
       const byResidual=value.remaining!=null&&Number(value.remaining)<=0;
       if(noFinalBalloon&&(byInstallments||byResidual))value.completed=true;
 
-      if(value.recurrenceEnd&&value.nextDueDate&&String(value.nextDueDate)>String(value.recurrenceEnd)&&Number(value.finalPayment||0)>0){
+      if(value.monthlyPhaseComplete&&value.finalPaymentDate&&value.nextDueDate&&String(value.nextDueDate)>String(value.finalPaymentDate)){
+        value.completed=true;
+        value.nextDueDate='';
+      }else if(value.recurrenceEnd&&value.nextDueDate&&String(value.nextDueDate)>String(value.recurrenceEnd)&&Number(value.finalPayment||0)>0){
         value.regularMonthly=value.regularMonthly??value.monthly;
         value.monthly=0;
         value.monthlyPhaseComplete=true;
         value.nextDueDate=value.finalPaymentDate||'';
         await ensureBalloon(value);
-      }
-      if(value.monthlyPhaseComplete&&value.finalPaymentDate&&value.nextDueDate&&String(value.nextDueDate)>String(value.finalPaymentDate)){
-        value.completed=true;
-        value.nextDueDate='';
       }
     }
     return rawPut(store,value);
