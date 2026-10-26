@@ -104,7 +104,6 @@
     await loadCategories();
     const snap=await snapshot();const cycle=await FinanceEngineV35.syncBudgetCycle(FinanceDB,snap);if(cycle.changed)location.reload();
     const sheet=$('#sheetBody');if(sheet)new MutationObserver(()=>setTimeout(()=>decorateSheet().catch(()=>{}),0)).observe(sheet,{childList:true,subtree:true});
-    const app=$('#app');if(app)new MutationObserver(()=>schedule()).observe(app,{childList:true,subtree:true,characterData:true});
     setTimeout(schedule,280);setTimeout(schedule,1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)schedule()});
   });
 })();
