@@ -53,6 +53,26 @@ async function main(){
   }
 
   {
+    const p=E.projection({
+      accounts:[],budgets:[],liabilities:[],goals:[],settings,
+      commitments:[{id:1,name:'Servizio mensile',amount:25,dueDate:'2026-11-08',cadence:'Mensile',recurring:true,active:true}]
+    },3,now);
+    assert.deepEqual(p.map(x=>x.fixed),[25,25,25],'una ricorrenza gia attiva non deve iniziare dalla prossima dueDate');
+    const m=E.calculate({accounts:[],budgets:[],liabilities:[],goals:[],settings,commitments:[{id:1,name:'Servizio mensile',amount:25,dueDate:'2026-11-08',cadence:'Mensile',recurring:true,active:true}]},now);
+    assert.equal(m.fixed,25,'il mese tipo deve includere una ricorrenza gia attiva');
+  }
+
+  {
+    const p=E.projection({
+      accounts:[],budgets:[],liabilities:[],goals:[],settings,
+      commitments:[{id:1,name:'Nuovo servizio',amount:30,dueDate:'2026-12-05',firstDueDate:'2026-12-05',cadence:'Mensile',recurring:true,active:true}]
+    },4,now);
+    assert.deepEqual(p.map(x=>x.fixed),[0,0,30,30],'una vera ricorrenza futura deve partire solo dalla firstDueDate');
+    const m=E.calculate({accounts:[],budgets:[],liabilities:[],goals:[],settings,commitments:[{id:1,name:'Nuovo servizio',amount:30,dueDate:'2026-12-05',firstDueDate:'2026-12-05',cadence:'Mensile',recurring:true,active:true}]},now);
+    assert.equal(m.fixed,0,'una ricorrenza futura non deve pesare nel mese tipo corrente');
+  }
+
+  {
     assert.equal(E.salaryDate([{key:'salaryDay',value:10}],new Date(2026,9,26,12)),'2026-11-10');
     assert.equal(E.cycleStart([{key:'salaryDay',value:10}],new Date(2026,9,26,12)),'2026-10-10');
   }
