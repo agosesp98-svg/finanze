@@ -29,6 +29,7 @@ jobs:
           node --check engine.js
           node --check app.js
           node --check appearance.js
+          node --check glass-surface.js
           node --check sw.js
       - name: Run financial regression tests
         run: node tests/engine.test.js
