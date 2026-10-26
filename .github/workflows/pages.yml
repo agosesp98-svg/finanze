@@ -26,8 +26,9 @@ jobs:
       - name: Validate JavaScript
         run: |
           node --check db.js
+          node --check finance-engine-v35.js
           node --check app-v32.js
-          node --check ux-v33.js
+          node --check ux-v35.js
           node --check rates-v34.js
           node --check sw.js
       - name: Configure Pages
