@@ -86,6 +86,29 @@ const FinanceEngine=(()=>{
     return goals.filter(g=>!g.completed&&Number(g.target||0)>Number(g.current||0)).sort((a,b)=>rank(a.priority)-rank(b.priority)||String(a.targetDate||'9999').localeCompare(String(b.targetDate||'9999')))[0]||null;
   }
 
+  function monthBreakdown(snapshot,key,now=new Date()){
+    const {budgets=[],liabilities=[],commitments=[],settings=[],goals=[]}=snapshot;
+    const date=parse(`${key}-01`)||now;
+    const budgetItems=budgets.filter(b=>budgetTarget(b)>0).map(b=>({kind:'budget',id:b.id,name:b.name,amount:budgetTarget(b)}));
+    const budgetTotal=budgetItems.reduce((s,x)=>s+x.amount,0);
+    const rateItems=liabilities.filter(l=>{
+      if(l.completed||Number(l.monthly||0)<=0)return false;
+      let start='';
+      if(l.firstDueDate)start=monthKey(l.firstDueDate);
+      else if(Number(l.completedInstallments||0)<=0&&l.nextDueDate)start=monthKey(l.nextDueDate);
+      const end=monthKey(l.recurrenceEnd||l.finalDueDate||'');
+      if(start&&key<start)return false;
+      if(end&&key>end)return false;
+      return true;
+    }).map(l=>({kind:'liability',id:l.id,name:l.name,amount:Number(l.monthly||0)}));
+    const recurringItems=recurringCommitments(commitments)
+      .filter(c=>!c.firstDueDate||key>=monthKey(c.firstDueDate))
+      .map(c=>({kind:'recurring',id:c.id,name:c.name,amount:monthlyEquivalent(c)}));
+    const rateTotal=rateItems.reduce((s,x)=>s+x.amount,0),recurringTotal=recurringItems.reduce((s,x)=>s+x.amount,0),fixedTotal=rateTotal+recurringTotal;
+    const salaryNet=Number(setting(settings,'salaryNet',0)||0),plannedOutflow=budgetTotal+fixedTotal,capacity=Math.max(0,salaryNet-plannedOutflow),goal=primaryGoal(goals,date),goalNeed=goal?goalStats(goal,date).monthly:null;
+    return{month:key,date,salaryNet,budgetItems,budgetTotal,rateItems,rateTotal,recurringItems,recurringTotal,fixedTotal,plannedOutflow,capacity,goal,goalNeed,gap:goalNeed?Math.max(0,goalNeed-capacity):0};
+  }
+
   function calculate({accounts=[],budgets=[],commitments=[],liabilities=[],goals=[],settings=[]},now=new Date()){
     const today=iso(now),salary=salaryDate(settings,now);
     const total=accounts.reduce((s,a)=>s+Number(a.balance||0),0);
@@ -114,19 +137,17 @@ const FinanceEngine=(()=>{
     const salaryNet=Number(setting(settings,'salaryNet',0)||0);
     const monthlyBudget=budgets.reduce((s,b)=>s+budgetTarget(b),0);
     const fixedData=fixedBreakdown(liabilities,commitments,now),fixed=fixedData.total;
+    const rateTotal=fixedData.items.filter(x=>x.kind==='liability').reduce((s,x)=>s+x.amount,0),recurringTotal=fixedData.items.filter(x=>x.kind==='recurring').reduce((s,x)=>s+x.amount,0);
     const goalCapacity=Math.max(0,salaryNet-monthlyBudget-fixed);
     const goal=primaryGoal(goals,now),goalNeed=goal?goalStats(goal,now).monthly:null;
-    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
+    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
   }
 
   function monthSequence(now=new Date(),count=6){const out=[];for(let i=0;i<count;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1,12);out.push({key:iso(d).slice(0,7),date:d})}return out}
   function projection(snapshot,months=6,now=new Date()){
-    const {budgets=[],liabilities=[],commitments=[],settings=[],goals=[]}=snapshot;
-    const salaryNet=Number(setting(settings,'salaryNet',0)||0),monthlyBudget=budgets.reduce((s,b)=>s+budgetTarget(b),0),standalone=recurringCommitments(commitments),goal=primaryGoal(goals,now);
     return monthSequence(now,months).map(({key,date})=>{
-      const liabilityFixed=liabilities.filter(l=>{if(l.completed||Number(l.monthly||0)<=0)return false;let start='';if(l.firstDueDate)start=monthKey(l.firstDueDate);else if(Number(l.completedInstallments||0)<=0)start=monthKey(l.nextDueDate||'');const end=monthKey(l.recurrenceEnd||l.finalDueDate||'');if(start&&key<start)return false;if(end&&key>end)return false;return true}).reduce((s,l)=>s+Number(l.monthly||0),0);
-      const recurringFixed=standalone.filter(c=>!c.firstDueDate||key>=monthKey(c.firstDueDate)).reduce((s,c)=>s+monthlyEquivalent(c),0),fixed=liabilityFixed+recurringFixed,capacity=Math.max(0,salaryNet-monthlyBudget-fixed),need=goal?goalStats(goal,date).monthly:null;
-      return{month:key,date,fixed,monthlyBudget,salaryNet,capacity,goalNeed:need,gap:need?Math.max(0,need-capacity):0};
+      const b=monthBreakdown(snapshot,key,now);
+      return{month:key,date,fixed:b.fixedTotal,rateTotal:b.rateTotal,recurringTotal:b.recurringTotal,monthlyBudget:b.budgetTotal,plannedOutflow:b.plannedOutflow,salaryNet:b.salaryNet,capacity:b.capacity,goalNeed:b.goalNeed,gap:b.gap,budgetItems:b.budgetItems,rateItems:b.rateItems,recurringItems:b.recurringItems};
     });
   }
 
@@ -158,6 +179,6 @@ const FinanceEngine=(()=>{
     return{changed};
   }
 
-  return{norm,iso,parse,calculate,salaryDate,cycleStart,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
+  return{norm,iso,parse,calculate,salaryDate,cycleStart,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceEngine;
