@@ -1,13 +1,13 @@
 {
-  "name": "Finanze Personali",
-  "short_name": "Finanze",
-  "description": "Gestione personale di conti, budget, scadenze, obiettivi e movimenti.",
-  "start_url": "./",
-  "scope": "./",
-  "display": "standalone",
-  "background_color": "#f5f5f7",
-  "theme_color": "#f5f5f7",
-  "icons": [
+  "name":"Finanze Personali",
+  "short_name":"Finanze",
+  "description":"Gestione semplice di spese, piano finanziario e obiettivi.",
+  "start_url":"./",
+  "scope":"./",
+  "display":"standalone",
+  "background_color":"#f2f2f7",
+  "theme_color":"#f2f2f7",
+  "icons":[
     {"src":"./icons/icon-192.png","sizes":"192x192","type":"image/png"},
     {"src":"./icons/icon-512.png","sizes":"512x512","type":"image/png"},
     {"src":"./icons/apple-touch-icon.png","sizes":"180x180","type":"image/png"}
