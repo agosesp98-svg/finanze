@@ -1,2 +1,0 @@
-/* Compatibility shim: index.html still requests this path. V27 owns the visual system. */
-@import url('./ui-v27.css?v=27');
