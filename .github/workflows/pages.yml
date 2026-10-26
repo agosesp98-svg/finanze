@@ -28,6 +28,7 @@ jobs:
           node --check db.js
           node --check app-v32.js
           node --check ux-v33.js
+          node --check rates-v34.js
           node --check sw.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
