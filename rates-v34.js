@@ -28,7 +28,7 @@
     )&&Number(c.amount||0)===Number(liability.finalPayment||0));
     if(exists)return;
     await rawAdd('commitments',{
-      name:`Pagamento finale`,
+      name:'Pagamento finale',
       amount:Number(liability.finalPayment||0),
       dueDate:liability.finalPaymentDate,
       cadence:'Una tantum',
@@ -93,15 +93,18 @@
 
   async function consumePatch(){
     const url=new URL(location.href);
-    const raw=url.searchParams.get(PATCH_PARAM);
+    const hashParams=new URLSearchParams(url.hash.replace(/^#/,''));
+    const raw=url.searchParams.get(PATCH_PARAM)||hashParams.get(PATCH_PARAM);
     if(!raw)return false;
+    const stripPatch=()=>{
+      url.searchParams.delete(PATCH_PARAM);
+      hashParams.delete(PATCH_PARAM);
+      url.hash=hashParams.toString()?`#${hashParams.toString()}`:'';
+      history.replaceState(null,'',url.pathname+(url.search?url.search:'')+url.hash);
+    };
     let patch=[];
     try{patch=JSON.parse(decodeBase64Url(raw))}catch{patch=[]}
-    if(!Array.isArray(patch)||!patch.length){
-      url.searchParams.delete(PATCH_PARAM);
-      history.replaceState(null,'',url.pathname+(url.search?url.search:'')+url.hash);
-      return false;
-    }
+    if(!Array.isArray(patch)||!patch.length){stripPatch();return false;}
 
     const liabilities=await FinanceDB.getAll('liabilities');
     const commitments=await FinanceDB.getAll('commitments');
@@ -132,8 +135,7 @@
       }
     }
 
-    url.searchParams.delete(PATCH_PARAM);
-    history.replaceState(null,'',url.pathname+(url.search?url.search:'')+url.hash);
+    stripPatch();
     return changed;
   }
 
