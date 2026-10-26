@@ -11,27 +11,19 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=35">
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./ui-v32.css?v=35">
-  <link rel="stylesheet" href="./ux-v33.css?v=35">
+  <link rel="stylesheet" href="./app.css">
 </head>
 <body>
-  <div id="boot" class="boot" aria-live="polite">
-    <div class="boot-mark">€</div>
-  </div>
-
+  <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
   <div class="app" id="app">
     <header class="topbar">
       <div class="brand">Finanze</div>
       <div class="top-actions">
-        <button id="settingsBtn" class="icon-button" type="button" aria-label="Impostazioni">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg>
-        </button>
-        <button id="quickAdd" class="icon-button primary" type="button" aria-label="Aggiungi movimento">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-        </button>
+        <button id="settingsBtn" class="icon-button" type="button" aria-label="Impostazioni"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21h-4v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H3v-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V3h4v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.1v4H21a1.7 1.7 0 0 0-1.6 1Z"/></svg></button>
+        <button id="quickAdd" class="icon-button primary" type="button" aria-label="Aggiungi movimento"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
       </div>
     </header>
 
@@ -43,8 +35,9 @@
           <div><small id="spendLabel">Puoi spendere</small><strong id="spendValue">€ 0,00</strong></div>
           <div class="spend-meta"><span id="spendDaily">€ 0 / giorno</span><span id="spendDays">—</span></div>
         </button>
+        <section id="monthlyPlan" class="month-card" aria-label="Piano mensile"></section>
 
-        <div class="section-title"><h2>I tuoi soldi</h2><button id="accountsSettingsLink" type="button" onclick="document.getElementById('settingsBtn').click()">Gestisci</button></div>
+        <div class="section-title"><h2>I tuoi soldi</h2><button type="button" onclick="document.getElementById('settingsBtn').click()">Gestisci</button></div>
         <div id="accountsStrip" class="account-scroll" aria-label="Conti"></div>
 
         <div class="section-title"><h2>Prossime uscite</h2><button type="button" data-view="plan">Vedi piano</button></div>
@@ -57,27 +50,30 @@
       <section id="view-movements" class="view">
         <div class="page-head"><div><h1>Movimenti</h1><p>Dove sono andati i soldi.</p></div></div>
         <div id="movementFilters" class="segmented" role="tablist" aria-label="Filtra movimenti">
-          <button class="active" type="button" data-filter="all">Tutti</button>
-          <button type="button" data-filter="expense">Uscite</button>
-          <button type="button" data-filter="income">Entrate</button>
-          <button type="button" data-filter="unclassified">Da sistemare</button>
+          <button class="active" type="button" data-filter="all">Tutti</button><button type="button" data-filter="expense">Uscite</button><button type="button" data-filter="income">Entrate</button><button type="button" data-filter="unclassified">Da sistemare</button>
         </div>
         <div id="unclassifiedNotice" class="notice" hidden></div>
         <div id="movementList" class="list-card"></div>
       </section>
 
       <section id="view-plan" class="view">
-        <div class="page-head"><div><h1>Piano</h1><p>Cosa deve uscire e quanto puoi destinare.</p></div></div>
+        <div class="page-head"><div><h1>Piano</h1><p>Come viene distribuito il tuo denaro.</p></div></div>
         <div id="planSummary" class="plan-summary"></div>
 
-        <div class="section-title"><h2>Budget</h2><span>Ciclo stipendio</span></div>
+        <div class="section-title"><h2>Budget</h2><button type="button" data-new-budget>Nuovo</button></div>
         <div id="budgetList" class="list-card"></div>
 
         <div class="section-title"><h2>Uscite programmate</h2><button type="button" data-new-commitment>Nuova</button></div>
         <div id="scheduledList" class="list-card"></div>
 
-        <div class="section-title"><h2>Rate e finanziamenti</h2><span>Monitoraggio</span></div>
+        <div class="section-title"><h2>Rate e finanziamenti</h2><span>Automatici</span></div>
         <div id="liabilityList" class="list-card"></div>
+
+        <div class="section-title"><h2>Come cambia il margine</h2><span>6 mesi</span></div>
+        <div id="projectionList" class="projection"></div>
+
+        <div class="section-title"><h2>Storico cicli</h2><span>Ultimi 6</span></div>
+        <div id="historyList" class="list-card"></div>
       </section>
 
       <section id="view-goals" class="view">
@@ -96,18 +92,13 @@
 
   <div id="sheetBackdrop" class="sheet-backdrop"></div>
   <section id="sheet" class="sheet" aria-hidden="true" aria-modal="true" role="dialog">
-    <div class="sheet-grabber"></div>
-    <div class="sheet-head"><h2 id="sheetTitle">Dettaglio</h2><button class="icon-button" type="button" data-close-sheet aria-label="Chiudi">×</button></div>
-    <div id="sheetBody" class="sheet-body"></div>
+    <div class="sheet-grabber"></div><div class="sheet-head"><h2 id="sheetTitle">Dettaglio</h2><button class="icon-button" type="button" data-close-sheet aria-label="Chiudi">×</button></div><div id="sheetBody" class="sheet-body"></div>
   </section>
-
   <input id="backupInput" type="file" accept="application/json,.json" hidden>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=35"></script>
-  <script src="./finance-engine-v35.js?v=35"></script>
-  <script src="./app-v32.js?v=35"></script>
-  <script src="./ux-v35.js?v=35"></script>
-  <script src="./rates-v34.js?v=35"></script>
+  <script src="./db.js"></script>
+  <script src="./engine.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
