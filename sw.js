@@ -1,11 +1,13 @@
-const CACHE='finanze-pwa-v32';
+const CACHE='finanze-pwa-v33';
 const CORE=[
   './',
   './index.html',
-  './manifest.webmanifest?v=32',
-  './ui-v32.css?v=32',
-  './db.js?v=32',
-  './app-v32.js?v=32',
+  './manifest.webmanifest?v=33',
+  './ui-v32.css?v=33',
+  './ux-v33.css?v=33',
+  './db.js?v=33',
+  './app-v32.js?v=33',
+  './ux-v33.js?v=33',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png'
