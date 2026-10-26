@@ -54,9 +54,14 @@ const FinanceEngine=(()=>{
     return true;
   }
 
+  function recurringStarted(c,now=new Date()){
+    if(!c.firstDueDate)return true;
+    return monthKey(iso(now))>=monthKey(c.firstDueDate);
+  }
+
   function fixedBreakdown(liabilities=[],commitments=[],now=new Date()){
     const liabilityItems=liabilities.filter(l=>!l.completed&&Number(l.monthly||0)>0&&liabilityStarted(l,now)).map(l=>({kind:'liability',id:l.id,name:l.name,amount:Number(l.monthly||0)}));
-    const recurringItems=recurringCommitments(commitments).map(c=>({kind:'recurring',id:c.id,name:c.name,amount:monthlyEquivalent(c)}));
+    const recurringItems=recurringCommitments(commitments).filter(c=>recurringStarted(c,now)).map(c=>({kind:'recurring',id:c.id,name:c.name,amount:monthlyEquivalent(c)}));
     const items=[...liabilityItems,...recurringItems];
     return{items,total:items.reduce((s,x)=>s+x.amount,0)};
   }
@@ -120,7 +125,7 @@ const FinanceEngine=(()=>{
     const salaryNet=Number(setting(settings,'salaryNet',0)||0),monthlyBudget=budgets.reduce((s,b)=>s+budgetTarget(b),0),standalone=recurringCommitments(commitments),goal=primaryGoal(goals,now);
     return monthSequence(now,months).map(({key,date})=>{
       const liabilityFixed=liabilities.filter(l=>{if(l.completed||Number(l.monthly||0)<=0)return false;let start='';if(l.firstDueDate)start=monthKey(l.firstDueDate);else if(Number(l.completedInstallments||0)<=0)start=monthKey(l.nextDueDate||'');const end=monthKey(l.recurrenceEnd||l.finalDueDate||'');if(start&&key<start)return false;if(end&&key>end)return false;return true}).reduce((s,l)=>s+Number(l.monthly||0),0);
-      const recurringFixed=standalone.filter(c=>!c.dueDate||key>=monthKey(c.dueDate)).reduce((s,c)=>s+monthlyEquivalent(c),0),fixed=liabilityFixed+recurringFixed,capacity=Math.max(0,salaryNet-monthlyBudget-fixed),need=goal?goalStats(goal,date).monthly:null;
+      const recurringFixed=standalone.filter(c=>!c.firstDueDate||key>=monthKey(c.firstDueDate)).reduce((s,c)=>s+monthlyEquivalent(c),0),fixed=liabilityFixed+recurringFixed,capacity=Math.max(0,salaryNet-monthlyBudget-fixed),need=goal?goalStats(goal,date).monthly:null;
       return{month:key,date,fixed,monthlyBudget,salaryNet,capacity,goalNeed:need,gap:need?Math.max(0,need-capacity):0};
     });
   }
