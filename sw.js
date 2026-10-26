@@ -1,5 +1,5 @@
-const CACHE='finanze-stable-v2-liquid';
-const CORE=['./','./index.html','./manifest.webmanifest','./app.css','./db.js','./engine.js','./app.js','./appearance.js','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
+const CACHE='finanze-stable-v3-insights';
+const CORE=['./','./index.html','./manifest.webmanifest','./app.css','./db.js','./engine.js','./app.js','./appearance.js','./insights.js','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));self.skipWaiting()});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));self.clients.claim()});
