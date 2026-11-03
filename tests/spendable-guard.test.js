@@ -6,23 +6,47 @@ applySpendableGuard(E);
 const now=new Date(2026,10,3,12,0,0);
 const settings=[{key:'salaryNet',value:1500},{key:'salaryDay',value:10},{key:'primaryAccountId',value:1}];
 
-const m=E.calculate({
-  accounts:[
-    {id:1,name:'Conto principale',balance:24,protected:false},
-    {id:2,name:'Altro conto',balance:34,protected:false}
-  ],
-  budgets:[{id:1,budget:200,spent:0}],
-  commitments:[
-    {id:1,name:'Uscita A',amount:30,dueDate:'2026-11-05',active:true,accountId:1},
-    {id:2,name:'Uscita B',amount:30,dueDate:'2026-11-06',active:true,accountId:2}
-  ],
-  liabilities:[],goals:[],settings
-},now);
+{
+  const m=E.calculate({
+    accounts:[
+      {id:1,name:'Conto principale',balance:24,protected:false},
+      {id:2,name:'Altro conto',balance:34,protected:false}
+    ],
+    budgets:[{id:1,budget:200,spent:0}],
+    commitments:[
+      {id:1,name:'Uscita A',amount:30,dueDate:'2026-11-05',active:true,accountId:1},
+      {id:2,name:'Uscita B',amount:30,dueDate:'2026-11-06',active:true,accountId:2}
+    ],
+    liabilities:[],goals:[],settings
+  },now);
 
-assert.equal(m.due,60);
-assert.equal(m.ordinary,58);
-assert.equal(m.overallShortfall,2);
-assert.equal(m.primaryReserveShortfall,36,'il conto principale deve poter coprire tutte le uscite fino allo stipendio');
-assert.equal(m.blockingShortfall,36);
-assert.equal(m.spendable,0);
+  assert.equal(m.due,60);
+  assert.equal(m.ordinary,58);
+  assert.equal(m.overallShortfall,2);
+  assert.equal(m.primaryReserveShortfall,36,'il conto principale deve poter coprire tutte le uscite fino allo stipendio');
+  assert.equal(m.blockingShortfall,36);
+  assert.equal(m.spendable,0);
+}
+
+{
+  const earlySettings=[...settings,{key:'nextSalaryDate',value:'2026-11-05'}];
+  const m=E.calculate({
+    accounts:[
+      {id:1,name:'Conto principale',balance:24.35,protected:false},
+      {id:2,name:'Altro conto',balance:100,protected:false}
+    ],
+    budgets:[{id:1,budget:200,spent:0}],
+    commitments:[
+      {id:1,name:'Uscita del 9',amount:43.89,dueDate:'2026-11-09',active:true,estimated:true}
+    ],
+    liabilities:[],goals:[],settings:earlySettings
+  },now);
+
+  assert.equal(m.salary,'2026-11-10','una nextSalaryDate anticipata non deve accorciare la finestra prudenziale sotto il salaryDay');
+  assert.equal(m.due,43.89,'la scadenza del 9 deve entrare nel calcolo prima dello stipendio del 10');
+  assert.ok(Math.abs(m.primaryReserveShortfall-19.54)<0.005,`deficit atteso 19.54, ricevuto ${m.primaryReserveShortfall}`);
+  assert.ok(Math.abs(m.blockingShortfall-19.54)<0.005);
+  assert.equal(m.spendable,0);
+}
+
 console.log('Spendable guard tests: OK');
