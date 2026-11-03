@@ -109,6 +109,28 @@ const FinanceEngine=(()=>{
     return{month:key,date,salaryNet,budgetItems,budgetTotal,rateItems,rateTotal,recurringItems,recurringTotal,fixedTotal,plannedOutflow,capacity,goal,goalNeed,gap:goalNeed?Math.max(0,goalNeed-capacity):0};
   }
 
+  function commitmentAccountId(c,liabilities,primary){
+    let accountId=c.accountId;
+    if(!accountId&&(c.liabilityId||c.liabilityKey)){
+      const l=liabilities.find(x=>Number(x.id)===Number(c.liabilityId)||(c.liabilityKey&&x.scheduleKey===c.liabilityKey));
+      accountId=l?.accountId;
+    }
+    return Number(accountId||primary?.id||0)||0;
+  }
+
+  function accountFunding(activeDue,accounts,liabilities,primary){
+    const dueByAccount=new Map();
+    for(const c of activeDue){
+      const accountId=commitmentAccountId(c,liabilities,primary),key=accountId||'unassigned';
+      dueByAccount.set(key,(dueByAccount.get(key)||0)+Number(c.amount||0));
+    }
+    return [...dueByAccount.entries()].map(([key,due])=>{
+      const account=key==='unassigned'?null:accounts.find(a=>Number(a.id)===Number(key));
+      const balance=account&&!account.protected?Number(account.balance||0):0;
+      return{accountId:account?.id??null,accountName:account?.name||'Conto da finanziare',due,balance,shortfall:Math.max(0,due-balance)};
+    });
+  }
+
   function calculate({accounts=[],budgets=[],commitments=[],liabilities=[],goals=[],settings=[]},now=new Date()){
     const today=iso(now),salary=salaryDate(settings,now);
     const total=accounts.reduce((s,a)=>s+Number(a.balance||0),0);
@@ -119,17 +141,12 @@ const FinanceEngine=(()=>{
     const overallShortfall=Math.max(0,due-ordinary);
     const primaryId=Number(setting(settings,'primaryAccountId',accounts.find(a=>!a.protected)?.id||0));
     const primary=accounts.find(a=>Number(a.id)===primaryId)||accounts.find(a=>!a.protected)||null;
-    const primaryDue=activeDue.reduce((s,c)=>{
-      let accountId=c.accountId;
-      if(!accountId&&(c.liabilityId||c.liabilityKey)){
-        const l=liabilities.find(x=>Number(x.id)===Number(c.liabilityId)||(c.liabilityKey&&x.scheduleKey===c.liabilityKey));
-        accountId=l?.accountId;
-      }
-      if(!accountId)accountId=primary?.id;
-      return Number(accountId)===Number(primary?.id)?s+Number(c.amount||0):s;
-    },0);
-    const primaryShortfall=primary?Math.max(0,primaryDue-Number(primary.balance||0)):0;
-    const blockingShortfall=Math.max(overallShortfall,primaryShortfall);
+    const accountCoverage=accountFunding(activeDue,accounts,liabilities,primary);
+    const fundingShortfall=accountCoverage.reduce((s,x)=>s+Number(x.shortfall||0),0);
+    const primaryCoverage=accountCoverage.find(x=>Number(x.accountId)===Number(primary?.id));
+    const primaryDue=Number(primaryCoverage?.due||0);
+    const primaryShortfall=Number(primaryCoverage?.shortfall||0);
+    const blockingShortfall=Math.max(overallShortfall,fundingShortfall);
     const budgetRemaining=budgets.reduce((s,b)=>s+Math.max(0,budgetTarget(b)-Number(b.spent||0)),0);
     const afterDue=Math.max(0,ordinary-due);
     const spendable=blockingShortfall>0?0:Math.max(0,Math.min(budgetRemaining,afterDue));
@@ -140,7 +157,7 @@ const FinanceEngine=(()=>{
     const rateTotal=fixedData.items.filter(x=>x.kind==='liability').reduce((s,x)=>s+x.amount,0),recurringTotal=fixedData.items.filter(x=>x.kind==='recurring').reduce((s,x)=>s+x.amount,0);
     const goalCapacity=Math.max(0,salaryNet-monthlyBudget-fixed);
     const goal=primaryGoal(goals,now),goalNeed=goal?goalStats(goal,now).monthly:null;
-    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
+    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,accountCoverage,fundingShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
   }
 
   function monthSequence(now=new Date(),count=6){const out=[];for(let i=0;i<count;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1,12);out.push({key:iso(d).slice(0,7),date:d})}return out}
