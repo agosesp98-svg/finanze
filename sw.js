@@ -1,4 +1,4 @@
-const CACHE='finanze-stable-v6-recurrence-controls';
+const CACHE='finanze-stable-v7-account-funding';
 const CORE=['./','./index.html','./manifest.webmanifest','./app.css','./db.js','./engine.js','./app.js','./appearance.js','./insights.js','./projection-details.js','./recurrence-controls.js','./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));self.skipWaiting()});
