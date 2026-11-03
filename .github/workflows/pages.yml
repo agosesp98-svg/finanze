@@ -27,6 +27,7 @@ jobs:
         run: |
           node --check db.js
           node --check engine.js
+          node --check spendable-guard.js
           node --check app.js
           node --check appearance.js
           node --check insights.js
@@ -34,7 +35,9 @@ jobs:
           node --check recurrence-controls.js
           node --check sw.js
       - name: Run financial regression tests
-        run: node tests/engine.test.js
+        run: |
+          node tests/engine.test.js
+          node tests/spendable-guard.test.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
