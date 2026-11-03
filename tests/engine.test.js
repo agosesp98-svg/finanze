@@ -14,6 +14,24 @@ async function main(){
     },now);
     assert.equal(m.overallShortfall,0);
     assert.equal(m.primaryShortfall,50);
+    assert.equal(m.fundingShortfall,50);
+    assert.equal(m.spendable,0);
+  }
+
+  {
+    const m=E.calculate({
+      accounts:[{id:1,name:'Conto addebiti',balance:24,protected:false},{id:2,name:'Altro conto',balance:34,protected:false}],
+      budgets:[{id:1,budget:200,spent:0}],
+      commitments:[{id:1,name:'Prossime uscite',amount:60,dueDate:'2026-11-01',active:true}],
+      liabilities:[],goals:[],settings
+    },now);
+    assert.equal(m.ordinary,58);
+    assert.equal(m.due,60);
+    assert.equal(m.overallShortfall,2,'la liquidita aggregata da sola vedrebbe solo 2 euro mancanti');
+    assert.equal(m.primaryDue,60,'le uscite senza conto esplicito devono gravare sul conto principale');
+    assert.equal(m.primaryShortfall,36);
+    assert.equal(m.fundingShortfall,36,'il fabbisogno reale deve rispettare il conto da cui partono gli addebiti');
+    assert.equal(m.blockingShortfall,36);
     assert.equal(m.spendable,0);
   }
 
