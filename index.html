@@ -11,10 +11,10 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261103b">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css">
+  <link rel="stylesheet" href="./app.css?v=20261103b">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -97,12 +97,20 @@
   <input id="backupInput" type="file" accept="application/json,.json" hidden>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js"></script>
-  <script src="./engine.js"></script>
-  <script src="./app.js"></script>
-  <script src="./appearance.js"></script>
-  <script src="./insights.js"></script>
-  <script src="./projection-details.js"></script>
-  <script src="./recurrence-controls.js"></script>
+  <script src="./db.js?v=20261103b"></script>
+  <script src="./engine.js?v=20261103b"></script>
+  <script src="./spendable-guard.js?v=20261103b"></script>
+  <script src="./app.js?v=20261103b"></script>
+  <script src="./appearance.js?v=20261103b"></script>
+  <script src="./insights.js?v=20261103b"></script>
+  <script src="./projection-details.js?v=20261103b"></script>
+  <script src="./recurrence-controls.js?v=20261103b"></script>
+  <script>
+    if('serviceWorker' in navigator){
+      let refreshing=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{if(refreshing)return;refreshing=true;location.reload()});
+      navigator.serviceWorker.getRegistration().then(reg=>reg?.update()).catch(()=>{});
+    }
+  </script>
 </body>
 </html>
