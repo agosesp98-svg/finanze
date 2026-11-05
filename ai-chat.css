@@ -1,0 +1,45 @@
+/* Finanze AI — isolated tab styles; reuses the Finanze design tokens. */
+.tabbar{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tabbar .tab{min-width:0}
+.tabbar .tab span{font-size:11px}
+#view-ai{padding-bottom:4px}
+.ai-page-head h1{font-size:37px}
+.ai-page-head .text-button{flex:none}
+.ai-state{display:flex;align-items:center;gap:8px;color:var(--secondary);font-size:12px;font-weight:680;margin:0 2px 16px}
+.ai-state small{margin-left:auto;font-size:11px;font-weight:550;color:var(--tertiary)}
+.ai-state-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:var(--blue)}
+.ai-panel{border:1px solid var(--separator);border-radius:23px;background:var(--glass);padding:18px;margin-bottom:14px;box-shadow:0 12px 30px rgba(45,55,72,.055);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.ai-panel h2{margin:0 0 10px;font-size:22px;letter-spacing:-.025em}
+.ai-panel .helper{line-height:1.55}
+.ai-panel .form{margin:16px 0 0}
+.ai-doc-link{display:inline-flex;align-items:center;margin:16px 0 2px;color:var(--blue);font-weight:690;font-size:14px;text-decoration:none}
+.ai-setup-note{margin-top:15px!important}
+.ai-privacy{padding:12px 14px;margin-bottom:12px}
+.ai-privacy .check-row{min-height:53px}
+.ai-privacy .check-row span{display:grid;gap:3px;min-width:0;padding-right:8px}
+.ai-privacy .check-row strong{font-size:14px;line-height:1.3}
+.ai-privacy .check-row small{font-size:11px;color:var(--secondary)}
+.ai-privacy .helper{margin:4px 0 1px;font-size:12px}
+.ai-messages{min-height:210px;max-height:min(51dvh,480px);overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:14px 3px 16px;scrollbar-width:thin}
+.ai-welcome{border-radius:24px;background:var(--surface);border:1px solid var(--separator);padding:20px 18px;text-align:left}
+.ai-welcome h2{font-size:22px;line-height:1.2;letter-spacing:-.025em;margin:0 0 8px}
+.ai-welcome p{color:var(--secondary);font-size:14px;line-height:1.55;margin:0}
+.ai-bubble{min-width:0;max-width:94%;display:grid;gap:5px;align-self:flex-start;border-radius:21px 21px 21px 6px;padding:12px 14px;background:var(--surface);border:1px solid var(--separator);box-shadow:0 4px 14px rgba(0,0,0,.025);font-size:14px;line-height:1.56;overflow-wrap:anywhere}
+.ai-bubble small{font-size:11px;letter-spacing:.01em;font-weight:730;color:var(--secondary)}
+.ai-bubble>div{white-space:pre-wrap}
+.ai-bubble.from-user{background:var(--blue);color:#fff;align-self:flex-end;border-color:transparent;border-radius:21px 21px 6px 21px}
+.ai-bubble.from-user small{color:rgba(255,255,255,.79)}
+.ai-suggestions{display:flex;gap:7px;overflow-x:auto;padding:7px 1px 13px;scrollbar-width:none}
+.ai-suggestions::-webkit-scrollbar{display:none}
+.ai-suggestions button{flex:0 0 auto;min-height:38px;border:1px solid var(--separator);border-radius:999px;background:var(--surface);font-size:12px;font-weight:640;color:var(--text);padding:8px 12px;white-space:nowrap}
+.ai-composer{display:flex;align-items:flex-end;gap:9px;padding:8px;border:1px solid var(--glass-border);border-radius:22px;background:var(--glass);box-shadow:var(--glass-shadow);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.ai-composer textarea{flex:1;min-height:45px;max-height:125px;resize:vertical;border:0;background:transparent;outline:none!important;padding:10px 8px;font-size:15px;line-height:1.42}
+.ai-composer textarea::placeholder{color:var(--tertiary)}
+.ai-composer button{flex:0 0 auto;min-height:42px;border:0;border-radius:14px;padding:0 15px;background:var(--blue);color:#fff;font-weight:700;font-size:14px}
+.ai-composer button:disabled{opacity:.65;cursor:default}
+.ai-bottom{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 2px;font-size:11px;color:var(--tertiary)}
+.ai-bottom button{flex:0 0 auto;border:0;background:transparent;font-size:12px;font-weight:650;color:var(--secondary);min-height:34px;padding:4px}
+.ai-error{background:var(--red-soft);color:var(--red);border-radius:13px;padding:11px 13px;font-size:13px;font-weight:630;margin-top:10px;overflow-wrap:anywhere}
+.ai-sr-only{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:380px){.tabbar .tab span{font-size:10px}.ai-panel{padding:15px}.ai-state small{display:none}.ai-composer button{padding:0 12px}}
+@media(prefers-reduced-transparency:reduce){.ai-panel,.ai-welcome,.ai-composer{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--surface-solid)}}
