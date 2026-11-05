@@ -26,7 +26,7 @@
       const engineSalary=String(result.salary||'');
       const horizon=!engineSalary||engineSalary<derivedSalary?derivedSalary:engineSalary;
 
-      const activeDue=commitments.filter(c=>c.active!==false&&c.dueDate&&String(c.dueDate)<=horizon);
+      const activeDue=engine.scheduledCommitments(commitments,now,6).filter(c=>String(c.dueDate)<=horizon);
       const due=activeDue.reduce((sum,c)=>sum+Number(c.amount||0),0);
       const ordinary=Number(result.ordinary||0);
       const overallShortfall=Math.max(0,due-ordinary);
