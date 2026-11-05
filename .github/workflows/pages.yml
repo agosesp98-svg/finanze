@@ -42,6 +42,7 @@ jobs:
           node tests/engine.test.js
           node tests/spendable-guard.test.js
           node tests/ai-context.test.js
+          node tests/ai-ui.test.js
           node tests/cloudflare-ai.test.mjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
