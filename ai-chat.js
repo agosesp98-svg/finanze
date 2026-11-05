@@ -340,6 +340,7 @@ const FinanzeAIChat=(()=>{
     history=normalizeHistory(await settingsValue(HISTORY_KEY,[]));
     $('aiPrompt').value=localStorage.getItem(DRAFT_KEY)||'';
     resizeViewport();updateContext();updateComposer();renderMessages(true);showSetup(false);
+    if(history.at(-1)?.status==='failed')showError('L’ultima domanda non ha ricevuto risposta. Puoi riprovare.',{retry:true});
     $('aiConfigButton').addEventListener('click',()=>{if(!isConfigured())return;showSetup(!setupOpen)});
     $('aiSetupForm').addEventListener('submit',configure);
     $('aiNewChatButton').addEventListener('click',newChat);
