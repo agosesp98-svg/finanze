@@ -140,6 +140,26 @@ async function main(){
     assert.equal(added[0].value.dueDate,'2026-11-01');
   }
 
+  {
+    const on=new Date(2026,10,5,12);
+    const recurring=[{id:71,name:'Servizio periodico',amount:31.27,dueDate:'2026-11-17',cadence:'Mensile',recurring:true,active:true,accountId:1}];
+    const original=JSON.stringify(recurring);
+    const planned=E.scheduledCommitments(recurring,on,3);
+    assert.deepEqual(planned.map(x=>x.dueDate),['2026-11-17','2026-12-17','2027-01-17'],'mostra tutte le scadenze mensili nei prossimi tre mesi senza richiedere il pagamento precedente');
+    assert.equal(planned[0].projected,undefined,'la prima e una scadenza reale');
+    assert.equal(planned[1].projected,true,'le prossime sono previsioni');
+    assert.equal(planned[1].sourceCommitmentId,71);
+    assert.equal(JSON.stringify(recurring),original,'le previsioni non modificano IndexedDB');
+    const afterPayment=[
+      {...recurring[0],active:false,paidDate:'2026-11-17'},
+      {...recurring[0],id:72,dueDate:'2026-12-17',active:true}
+    ];
+    const moved=E.scheduledCommitments(afterPayment,on,3);
+    assert.equal(moved.filter(x=>x.dueDate==='2026-12-17').length,1,'nessun doppione quando la scadenza diventa reale');
+    assert.equal(moved.find(x=>x.dueDate==='2026-12-17').projected,undefined);
+    assert.equal(E.scheduledCommitments([],on,3).length,0,'le ricorrenze terminate non restano come fantasmi');
+  }
+
   console.log('Financial engine tests: OK');
 }
 
