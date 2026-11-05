@@ -85,7 +85,7 @@ const FinanzeAIChat=(()=>{
         response=await fetch(endpoint,{
           method:'POST',mode:'cors',cache:'no-store',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({messages:history.slice(-9),context}),
+          body:JSON.stringify({messages:history.slice(-9).map(m=>({role:m.role,content:m.content.slice(0,1500)})),context}),
           signal:controller.signal
         });
       }finally{clearTimeout(timeout)}
