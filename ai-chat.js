@@ -27,7 +27,9 @@ const FinanzeAIChat=(()=>{
       }));
   }
   function requestMessages(items,max=10){
-    return normalizeHistory(items).filter(m=>m.status!=='failed'&&m.status!=='skipped')
+    if(!Array.isArray(items))return [];
+    return items.filter(m=>m&&['user','assistant'].includes(m.role)&&typeof m.content==='string'&&m.content.trim()
+      &&m.status!=='failed'&&m.status!=='skipped')
       .slice(-max).map(m=>({role:m.role,content:m.content.slice(0,1500)}));
   }
 
@@ -267,6 +269,7 @@ const FinanzeAIChat=(()=>{
     try{
       if(navigator.onLine===false)throw new Error('Sei offline. Controlla la connessione e riprova.');
       const context=share?await financialContext():null;
+      if(manualStop)throw Object.assign(new Error('Interrotta'),{name:'AbortError'});
       const messages=requestMessages(history,10);
       if(!messages.length||messages.at(-1).role!=='user')throw new Error('Non riesco a preparare il messaggio.');
       const controller=new AbortController();activeController=controller;
