@@ -1,6 +1,6 @@
 # Finanze AI — attivazione gratuita
 
-L'interfaccia AI è già presente nella PWA Finanze. Questo Worker è il backend privato: serve un account Cloudflare personale per pubblicarlo. **Non inserire chiavi, password o dati finanziari in questo repository pubblico.**
+L'interfaccia AI è già presente nella PWA Finanze. Questo Worker è il backend privato: serve un account Cloudflare personale per pubblicarlo. Se hai già configurato il Worker, sostituisci soltanto il contenuto di `worker.js` nel suo editor e premi **Deploy**: non è necessario creare un altro Worker né cambiare i secrets. **Non inserire chiavi, password o dati finanziari in questo repository pubblico.**
 
 ## 1. Crea un Worker
 
@@ -34,10 +34,10 @@ La chiave è memorizzata soltanto nel browser/PWA, separata dal backup JSON. La 
 ## Privacy e costi
 
 - Il client non trasmette automaticamente dati finanziari: l'invio del riepilogo deve essere attivato esplicitamente.
-- Se il riepilogo è attivo, vengono inviati solo gli importi e i nomi essenziali relativi a conti, budget, obiettivi, rate e scadenze; **non** vengono inviati movimenti storici, file, IBAN o documenti.
+- Se il riepilogo è attivo, vengono inviati importi e nomi essenziali relativi a conti, budget, obiettivi, rate e scadenze, **più aggregati delle spese degli ultimi 90 giorni per categoria**, e l'eventuale elenco delle entrate attese. **Non** vengono inviati titoli/descrizioni dei singoli movimenti, file, IBAN o documenti.
 - Le domande e gli eventuali riepiloghi inviati vengono elaborati da **Cloudflare Workers AI**. Il backend non memorizza le richieste e non attiva log dei contenuti, ma Cloudflare è un fornitore esterno.
 - L'endpoint risponde soltanto alle richieste provenienti dal dominio della PWA e con chiave privata valida. Non è un sistema di accesso multiutente.
-- Il modello predefinito è `@cf/meta/llama-3.1-8b-instruct-fp8`, disponibile su Workers AI. Cloudflare offre **10.000 neurons gratis al giorno** nel piano Free: quando si raggiunge la quota, il servizio può interrompere le risposte fino al rinnovo; non viene automaticamente effettuato alcun addebito nel piano Free.
+- Il modello predefinito è `@cf/openai/gpt-oss-20b` (con ragionamento), disponibile su Workers AI. Il Worker precedente usava un modello più piccolo, Llama 3.1 8B. Cloudflare offre **10.000 neurons gratis al giorno** nel piano Free: quando si raggiunge la quota, il servizio può interrompere le risposte fino al rinnovo; non viene automaticamente effettuato alcun addebito nel piano Free.
 - L'AI è **consultiva e in sola lettura**: gli importi affidabili sono quelli calcolati dal motore finanziario dell'app. L'AI può sbagliare, specialmente su previsioni e ipotesi.
 
 ## Diagnostica
@@ -47,5 +47,6 @@ La chiave è memorizzata soltanto nel browser/PWA, separata dal backup JSON. La 
 - **Impossibile raggiungere Cloudflare**: verifica l'URL del Worker, la connessione e la pubblicazione del codice.
 - **Quota esaurita**: controlla Workers AI nel pannello Cloudflare.
 - **Modifiche alla chat su iPhone**: apri la PWA aggiornata senza cancellare dati Safari, per non eliminare IndexedDB.
+- **Modello ancora vecchio**: l'aggiornamento GitHub Pages NON aggiorna il Worker già pubblicato manualmente su Cloudflare. Apri Cloudflare → Workers & Pages → finanze-ai → Edit code, incolla l'ultima versione di `cloudflare-ai/worker.js` e premi Deploy. La chiave privata e il binding `AI` esistenti non cambiano.
 
 Documentazione ufficiale: [Workers AI setup](https://developers.cloudflare.com/workers-ai/get-started/workers-wrangler/), [Bindings](https://developers.cloudflare.com/workers-ai/configuration/bindings/), [Secrets](https://developers.cloudflare.com/workers/configuration/secrets/), [Pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/).
