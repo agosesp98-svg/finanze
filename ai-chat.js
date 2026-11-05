@@ -51,7 +51,7 @@ const FinanzeAIChat=(()=>{
     $('aiSendButton').disabled=busy;
     $('aiPrompt').disabled=busy;
     $('aiSendButton').textContent=busy?'Elaborazione…':'Invia';
-    $('aiPrivacyText').textContent=share?'Il riepilogo dei conti, budget e scadenze sarà inviato a Cloudflare con ogni domanda.':'Nessun saldo o dato finanziario viene condiviso automaticamente.';
+    $('aiPrivacyText').textContent=share?'Il riepilogo dei conti, budget e scadenze sarà inviato a Cloudflare con ogni domanda.':'Nessun riepilogo finanziario viene aggiunto. La domanda e gli ultimi messaggi vengono comunque inviati a Cloudflare.';
     showSetup(false);
     renderMessages();
   }
