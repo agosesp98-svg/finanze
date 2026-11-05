@@ -9,7 +9,8 @@ const Chat=require('../ai-chat.js');
     budgets:[{id:1,name:'Spesa',targetBudget:200,spent:30}],
     commitments:[{id:1,name:'Servizio mensile',amount:43.89,dueDate:'2026-11-09',cadence:'Mensile',active:true,recurring:true}],
     liabilities:[],goals:[{id:1,name:'Obiettivo',target:1000,current:120,targetDate:'2027-11-01'}],
-    movements:[{id:1,title:'NOT_FOR_AI',accountId:1}],
+    movements:[{id:1,title:'NOT_FOR_AI',type:'expense',amount:52.4,category:'Alimentari',date:'2026-11-03',accountId:1},{id:2,type:'expense',amount:10.1,category:'Alimentari',date:'2026-10-20',accountId:1},{id:3,type:'income',amount:5000,category:'Accredito',date:'2026-11-04',accountId:1}],
+    expectedIncomes:[{id:1,name:'Compenso atteso',amount:250,expectedDate:'2026-12-01',status:'In attesa'}],
     settings:[{key:'salaryNet',value:1500},{key:'salaryDay',value:10},{key:'primaryAccountId',value:1}]
   };
   const c=AI.build(snapshot,now);
@@ -19,6 +20,12 @@ const Chat=require('../ai-chat.js');
   assert.ok(c.thisCycle.shortfallBeforeSalary>=19.54-0.005);
   assert.ok(!JSON.stringify(c).includes('NOT_FOR_AI'),'no raw transaction/movement history should be sent');
   assert.equal(c.sixMonthPlan.length,6);
+  assert.equal(c.last90DaysOfRecordedSpending.byCategory[0].category,'Alimentari');
+  assert.equal(c.last90DaysOfRecordedSpending.byCategory[0].amount,62.5);
+  assert.equal(c.last90DaysOfRecordedSpending.totalSpent,62.5,'non contare entrate tra spese');
+  assert.equal(c.expectedIncomes[0].status,'In attesa');
+  assert.equal(c.thisCycle.currentLiquidBalance,24.35);
+  assert.equal(c.last90DaysOfRecordedSpending.expenseCount,2);
 }
 {
   assert.equal(Chat.normalizeWorkerUrl('https://finanze-ai.example.workers.dev'),'https://finanze-ai.example.workers.dev/chat');
