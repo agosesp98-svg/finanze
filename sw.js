@@ -1,5 +1,5 @@
-const CACHE='finanze-stable-v11-ai-chat';
-const V='20261105b';
+const CACHE='finanze-stable-v12-ai-upgrade';
+const V='20261105c';
 const CORE=['./','./index.html',`./manifest.webmanifest?v=${V}`,`./app.css?v=${V}`,`./db.js?v=${V}`,`./engine.js?v=${V}`,`./spendable-guard.js?v=${V}`,`./app.js?v=${V}`,`./appearance.js?v=${V}`,`./insights.js?v=${V}`,`./projection-details.js?v=${V}`,`./recurrence-controls.js?v=${V}`,`./ai-context.js?v=${V}`,`./ai-chat.js?v=${V}`,`./ai-chat.css?v=${V}`,'./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));self.skipWaiting()});
