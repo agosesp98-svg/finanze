@@ -11,11 +11,11 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20261105c">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261105d">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=20261105c">
-  <link rel="stylesheet" href="./ai-chat.css?v=20261105c">
+  <link rel="stylesheet" href="./app.css?v=20261105d">
+  <link rel="stylesheet" href="./ai-chat.css?v=20261105d">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -82,44 +82,63 @@
         <div id="goalsList"></div>
       </section>
       <section id="view-ai" class="view" aria-label="Finanze AI">
-        <div class="page-head ai-page-head">
-          <div><h1>Finanze AI</h1><p>Parla con il tuo bilancio.</p></div>
-          <button id="aiConfigButton" class="text-button" type="button">Configura</button>
-        </div>
-        <div class="ai-state"><span class="ai-state-dot"></span><span id="aiStatus">Attivazione necessaria</span><small>Cloudflare Workers AI</small></div>
-        <section id="aiSetup" class="ai-panel" aria-label="Configurazione AI">
-          <h2>Collega il tuo assistente</h2>
-          <p class="helper">Per attivarlo occorre un Worker Cloudflare gratuito con chiave privata. La configurazione resta su questo dispositivo; la chiave non viene inserita su GitHub.</p>
+        <header class="ai-header">
+          <div class="ai-identity">
+            <span class="ai-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 2 2.3 7.7L22 12l-7.7 2.3L12 22l-2.3-7.7L2 12l7.7-2.3L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+            <div class="ai-identity-copy"><h1>Finanze AI</h1><p class="ai-identity-status"><span id="aiStatusDot" class="ai-status-dot" aria-hidden="true"></span><span id="aiStatus">Assistente finanziario</span></p></div>
+          </div>
+          <div class="ai-header-actions">
+            <button id="aiNewChatButton" class="ai-tool-button" type="button" title="Nuova chat" aria-label="Nuova chat" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+            <button id="aiConfigButton" class="ai-tool-button" type="button" title="Impostazioni AI" aria-label="Impostazioni AI" aria-expanded="false" aria-controls="aiSetup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/><circle cx="8" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="2" fill="currentColor" stroke="none"/></svg></button>
+          </div>
+        </header>
+
+        <section id="aiSetup" class="ai-panel ai-setup" aria-label="Collegamento AI">
+          <div class="ai-setup-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 2 2.3 7.7L22 12l-7.7 2.3L12 22l-2.3-7.7L2 12l7.7-2.3L12 2Z" stroke="currentColor" stroke-width="1.5"/></svg></div>
+          <h2>Il tuo assistente, sempre qui.</h2>
+          <p>Collega il Worker Cloudflare per parlare con Finanze AI. Il collegamento rimane memorizzato su questo dispositivo.</p>
           <form id="aiSetupForm" class="form">
-            <div class="field"><label for="aiWorkerInput">Indirizzo del tuo Worker</label>
-              <input id="aiWorkerInput" type="url" inputmode="url" autocomplete="url" placeholder="https://finanze-ai.nome.workers.dev" required>
-            </div>
-            <div class="field"><label for="aiTokenInput">Chiave privata di accesso</label>
-              <input id="aiTokenInput" type="password" autocomplete="off" minlength="24" placeholder="Stessa chiave configurata nel Worker" required>
-            </div>
-            <button class="primary-button" type="submit">Salva collegamento</button>
+            <div class="field"><label for="aiWorkerInput">URL del Worker Cloudflare</label><input id="aiWorkerInput" type="url" inputmode="url" autocomplete="url" placeholder="https://finanze-ai.nome.workers.dev" required></div>
+            <div class="field"><label for="aiTokenInput">Chiave privata di accesso</label><input id="aiTokenInput" type="password" autocomplete="off" minlength="24" placeholder="CHAT_ACCESS_TOKEN" required></div>
+            <button class="primary-button" type="submit">Collega assistente</button>
           </form>
-          <a class="ai-doc-link" href="https://github.com/agosesp98-svg/finanze/tree/main/cloudflare-ai" target="_blank" rel="noopener noreferrer">Istruzioni di attivazione Cloudflare</a>
-          <p class="helper ai-setup-note">L’integrazione è in sola lettura: non modifica saldi né registra pagamenti.</p>
+          <div class="ai-setup-footer"><a href="https://github.com/agosesp98-svg/finanze/tree/main/cloudflare-ai" target="_blank" rel="noopener noreferrer">Guida alla configurazione</a><span>La chiave non viene pubblicata su GitHub.</span></div>
         </section>
-        <section id="aiChatArea" hidden aria-label="Chat AI">
-          <div class="ai-panel ai-privacy">
-            <label class="check-row" for="aiShare"><span><strong>Usa il riepilogo delle mie finanze</strong><small>Condivisione facoltativa per ogni domanda</small></span><input id="aiShare" type="checkbox"></label>
-            <p id="aiPrivacyText" class="helper"></p>
+
+        <section id="aiChatArea" class="ai-chat-layout" hidden aria-label="Chat AI">
+          <div class="ai-context-control">
+            <div class="ai-context-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></div>
+            <div class="ai-context-copy"><strong>Contesto finanziario</strong><span id="aiContextStatus">Non condiviso</span></div>
+            <label class="ai-switch" aria-label="Condividi il riepilogo finanziario con l'AI"><input id="aiShare" type="checkbox"><span class="ai-switch-track" aria-hidden="true"></span></label>
           </div>
-          <div id="aiMessages" class="ai-messages" role="log" aria-live="polite" aria-label="Conversazione"></div>
-          <div class="ai-suggestions" aria-label="Domande rapide">
-            <button type="button" data-ai-question="Quanto posso spendere fino al prossimo stipendio?">Quanto posso spendere?</button>
-            <button type="button" data-ai-question="Quali uscite ho prima del prossimo stipendio?">Prossime scadenze</button>
-            <button type="button" data-ai-question="Quanto posso accantonare al mese per i miei obiettivi?">Quanto risparmiare?</button>
+          <details class="ai-privacy-details"><summary>Quali dati utilizza l'AI?</summary><p id="aiPrivacyText"></p></details>
+
+          <div class="ai-transcript-wrap">
+            <div id="aiMessages" class="ai-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversazione"></div>
+            <button id="aiScrollBottomButton" class="ai-scroll-bottom" type="button" aria-label="Vai all'ultimo messaggio" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button>
           </div>
-          <form id="aiChatForm" class="ai-composer">
-            <label for="aiPrompt" class="ai-sr-only">Scrivi all’assistente</label>
-            <textarea id="aiPrompt" maxlength="1200" rows="2" placeholder="Chiedi qualcosa sulle tue finanze…" required></textarea>
-            <button id="aiSendButton" type="submit">Invia</button>
-          </form>
-          <div id="aiError" class="ai-error" role="alert" hidden></div>
-          <div class="ai-bottom"><span>Risposte da verificare. Cronologia salvata localmente; gli ultimi messaggi sono inviati all’AI.</span><button id="aiClearButton" type="button">Cancella chat</button></div>
+
+          <div id="aiError" class="ai-error" role="alert" hidden>
+            <div><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg><span id="aiErrorText"></span></div>
+            <button id="aiRetryButton" type="button">Riprova</button>
+          </div>
+
+          <div id="aiSuggestions" class="ai-suggestions" aria-label="Domande suggerite">
+            <button type="button" data-ai-question="Analizza il mio bilancio attuale: quali sono le priorità?" data-ai-requires-context="true"><svg viewBox="0 0 24 24"><path d="M4 17h4l3-5 3 2 6-9"/><path d="M4 21h16"/></svg><span>Analizza il mio bilancio</span></button>
+            <button type="button" data-ai-question="Quali pagamenti ho in scadenza e quanto incidono sulla liquidità?" data-ai-requires-context="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Prossime scadenze</span></button>
+            <button type="button" data-ai-question="Come posso risparmiare di più ogni mese, partendo dalle mie spese ricorrenti?" data-ai-requires-context="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M16 7H9a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H7"/></svg><span>Trova margine di risparmio</span></button>
+            <button type="button" data-ai-question="Aiutami a fare una simulazione per raggiungere i miei obiettivi." data-ai-requires-context="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span>Simula un obiettivo</span></button>
+          </div>
+
+          <div class="ai-composer-zone">
+            <form id="aiChatForm" class="ai-composer">
+              <label for="aiPrompt" class="ai-sr-only">Il tuo messaggio</label>
+              <textarea id="aiPrompt" maxlength="1200" rows="1" placeholder="Scrivi a Finanze AI..." required></textarea>
+              <button id="aiSendButton" type="submit" aria-label="Invia messaggio" title="Invia messaggio" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
+              <button id="aiStopButton" type="button" aria-label="Interrompi risposta" title="Interrompi risposta" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/></svg></button>
+            </form>
+            <div class="ai-composer-meta"><span id="aiComposerHint">Invio con ↵ · A capo con Maiusc + ↵</span><span id="aiCharCount" hidden>0/1200</span></div>
+          </div>
         </section>
       </section>
     </main>
@@ -140,16 +159,16 @@
   <input id="backupInput" type="file" accept="application/json,.json" hidden>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=20261105c"></script>
-  <script src="./engine.js?v=20261105c"></script>
-  <script src="./spendable-guard.js?v=20261105c"></script>
-  <script src="./app.js?v=20261105c"></script>
-  <script src="./appearance.js?v=20261105c"></script>
-  <script src="./insights.js?v=20261105c"></script>
-  <script src="./projection-details.js?v=20261105c"></script>
-  <script src="./recurrence-controls.js?v=20261105c"></script>
-  <script src="./ai-context.js?v=20261105c"></script>
-  <script src="./ai-chat.js?v=20261105c"></script>
+  <script src="./db.js?v=20261105d"></script>
+  <script src="./engine.js?v=20261105d"></script>
+  <script src="./spendable-guard.js?v=20261105d"></script>
+  <script src="./app.js?v=20261105d"></script>
+  <script src="./appearance.js?v=20261105d"></script>
+  <script src="./insights.js?v=20261105d"></script>
+  <script src="./projection-details.js?v=20261105d"></script>
+  <script src="./recurrence-controls.js?v=20261105d"></script>
+  <script src="./ai-context.js?v=20261105d"></script>
+  <script src="./ai-chat.js?v=20261105d"></script>
   <script>
     if('serviceWorker' in navigator){
       let refreshing=false;
