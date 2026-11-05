@@ -49,4 +49,19 @@ const settings=[{key:'salaryNet',value:1500},{key:'salaryDay',value:10},{key:'pr
   assert.equal(m.spendable,0);
 }
 
+{
+  const nowDecember=new Date(2026,11,6,12);
+  const snapshot={
+    accounts:[{id:1,balance:100,protected:false}],
+    budgets:[{id:1,budget:200,spent:0}],
+    commitments:[{id:89,name:'Abbonamento generico',amount:26.41,dueDate:'2026-11-08',cadence:'Mensile',recurring:true,active:true}],
+    liabilities:[],goals:[],settings
+  };
+  const result=E.calculate(snapshot,nowDecember);
+  const decemberDue=result.activeDue.filter(c=>c.dueDate==='2026-12-08');
+  assert.equal(decemberDue.length,1,'la ricorrenza prevista prima dello stipendio entra nello spendibile');
+  assert.equal(decemberDue[0].projected,true);
+  assert.ok(Math.abs(result.due-52.82)<0.005,'si riservano sia la scadenza scaduta sia quella in arrivo se la precedente non e stata pagata');
+}
+
 console.log('Spendable guard tests: OK');
