@@ -1,5 +1,5 @@
-const CACHE='finanze-stable-v9-salary-horizon';
-const V='20261103c';
+const CACHE='finanze-stable-v10-recurring-forecasts';
+const V='20261105a';
 const CORE=['./','./index.html',`./manifest.webmanifest?v=${V}`,`./app.css?v=${V}`,`./db.js?v=${V}`,`./engine.js?v=${V}`,`./spendable-guard.js?v=${V}`,`./app.js?v=${V}`,`./appearance.js?v=${V}`,`./insights.js?v=${V}`,`./projection-details.js?v=${V}`,`./recurrence-controls.js?v=${V}`,'./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)));self.skipWaiting()});
