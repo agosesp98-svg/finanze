@@ -47,6 +47,37 @@ const FinanceEngine=(()=>{
     return [...recurring.values()];
   }
 
+  // Future occurrences are projections, not persisted debts or paid movements.
+  // Only real commitments may be paid; projected entries become real when
+  // the preceding installment is marked paid by the existing app workflow.
+  function scheduledCommitments(commitments=[],now=new Date(),months=6){
+    const today=iso(now),span=clamp(Math.floor(Number(months)||6),1,24);
+    const horizon=iso(new Date(now.getFullYear(),now.getMonth()+span,1,12));
+    const actual=commitments.filter(c=>c.active!==false&&c.dueDate);
+    const seen=new Set(commitments.filter(c=>c.dueDate).map(c=>`${norm(c.name)}|${c.dueDate}`));
+    const forecasts=[];
+    for(const latest of recurringCommitments(commitments)){
+      if(!latest.dueDate)continue;
+      let next=nextDateByCadence(latest.dueDate,latest.cadence);
+      for(let steps=0;next&&next<horizon&&steps<150;steps++){
+        const key=`${norm(latest.name)}|${next}`;
+        if(next>=today&&!seen.has(key)){
+          forecasts.push({
+            name:latest.name,amount:Number(latest.amount||0),dueDate:next,
+            cadence:latest.cadence,accountId:latest.accountId,
+            active:true,estimated:!!latest.estimated,projected:true,
+            sourceCommitmentId:latest.id,sourceDueDate:latest.dueDate
+          });
+          seen.add(key);
+        }
+        const following=nextDateByCadence(next,latest.cadence);
+        if(!following||following<=next)break;
+        next=following;
+      }
+    }
+    return [...actual,...forecasts].sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate))||(a.projected?1:-1));
+  }
+
   function liabilityStarted(l,now=new Date()){
     const current=monthKey(iso(now));
     if(l.firstDueDate)return current>=monthKey(l.firstDueDate);
@@ -136,7 +167,7 @@ const FinanceEngine=(()=>{
     const total=accounts.reduce((s,a)=>s+Number(a.balance||0),0);
     const protectedTotal=accounts.filter(a=>a.protected).reduce((s,a)=>s+Number(a.balance||0),0);
     const ordinary=total-protectedTotal;
-    const activeDue=commitments.filter(c=>c.active!==false&&c.dueDate&&String(c.dueDate)<=salary);
+    const activeDue=scheduledCommitments(commitments,now,6).filter(c=>String(c.dueDate)<=salary);
     const due=activeDue.reduce((s,c)=>s+Number(c.amount||0),0);
     const overallShortfall=Math.max(0,due-ordinary);
     const primaryId=Number(setting(settings,'primaryAccountId',accounts.find(a=>!a.protected)?.id||0));
@@ -196,6 +227,6 @@ const FinanceEngine=(()=>{
     return{changed};
   }
 
-  return{norm,iso,parse,calculate,salaryDate,cycleStart,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
+  return{norm,iso,parse,calculate,scheduledCommitments,salaryDate,cycleStart,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceEngine;
