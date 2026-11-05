@@ -34,4 +34,17 @@ const Chat=require('../ai-chat.js');
   assert.throws(()=>Chat.normalizeWorkerUrl('https://example.com/collect'));
   assert.throws(()=>Chat.normalizeWorkerUrl('https://user:pass@finanze-ai.example.workers.dev'));
 }
+{
+  const old=[{role:'user',content:'Primo messaggio'},{role:'assistant',content:'Prima risposta'}];
+  const active=[...old,{role:'user',content:'Domanda in corso',status:'sending'}];
+  assert.equal(Chat.requestMessages(active).at(-1).content,'Domanda in corso',
+    'the currently pending message must reach Cloudflare');
+  const errors=[...old,{role:'user',content:'Richiesta precedente',status:'failed'},{role:'user',content:'Domanda nuova',status:'sending'}];
+  assert.deepEqual(Chat.requestMessages(errors).map(x=>x.content),
+    ['Primo messaggio','Prima risposta','Domanda nuova'],
+    'a failed message should not be sent again in a new question');
+  const restored=Chat.normalizeHistory([{role:'user',content:'Messaggio perso durante refresh',status:'sending'}]);
+  assert.equal(restored[0].status,'failed','interrupted messages must offer retry after reload');
+  assert.equal(Chat.requestMessages([{role:'user',content:'Messaggio non valido',status:'skipped'}]).length,0);
+}
 console.log('Finanze AI context tests: OK');
