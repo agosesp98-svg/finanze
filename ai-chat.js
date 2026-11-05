@@ -51,12 +51,12 @@ const FinanzeAIChat=(()=>{
     $('aiSendButton').disabled=busy;
     $('aiPrompt').disabled=busy;
     $('aiSendButton').textContent=busy?'Elaborazione…':'Invia';
-    $('aiPrivacyText').textContent=share?'Il riepilogo dei conti, budget e scadenze sarà inviato a Cloudflare con ogni domanda.':'Nessun riepilogo finanziario viene aggiunto. La domanda e gli ultimi messaggi vengono comunque inviati a Cloudflare.';
+    $('aiPrivacyText').textContent=share?'Il riepilogo comprende saldi, rate, obiettivi e totali delle spese per categoria negli ultimi 90 giorni. Verrà inviato a Cloudflare con ogni domanda, senza descrizioni dei singoli movimenti.':'Nessun riepilogo finanziario viene aggiunto. La domanda e gli ultimi messaggi vengono comunque inviati a Cloudflare.';
     showSetup(false);
     renderMessages();
   }
   async function financialContext(){
-    const names=['accounts','budgets','commitments','liabilities','goals','settings'];
+    const names=['accounts','budgets','commitments','liabilities','goals','settings','movements','expectedIncomes'];
     const values=await Promise.all(names.map(n=>FinanceDB.getAll(n)));
     const data=Object.fromEntries(names.map((n,i)=>[n,values[i]]));
     return FinanzeAIContext.build(data,new Date());
@@ -79,20 +79,20 @@ const FinanzeAIChat=(()=>{
     try{
       const context=share?await financialContext():null;
       const controller=new AbortController();
-      const timeout=setTimeout(()=>controller.abort(),35000);
+      const timeout=setTimeout(()=>controller.abort(),70000);
       let response;
       try{
         response=await fetch(endpoint,{
           method:'POST',mode:'cors',cache:'no-store',
           headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-          body:JSON.stringify({messages:history.slice(-9).map(m=>({role:m.role,content:m.content.slice(0,1500)})),context}),
+          body:JSON.stringify({messages:history.slice(-14).map(m=>({role:m.role,content:m.content.slice(0,1500)})),context}),
           signal:controller.signal
         });
       }finally{clearTimeout(timeout)}
       const data=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(data.error||('Errore HTTP '+response.status));
       if(typeof data.reply!=='string'||!data.reply.trim())throw new Error('Risposta AI vuota.');
-      history.push({role:'assistant',content:data.reply.slice(0,3500)});
+      history.push({role:'assistant',content:data.reply.slice(0,6500)});
       history=history.slice(-messageLimit);connected=true;
       renderMessages();showSetup(false);
     }catch(error){
