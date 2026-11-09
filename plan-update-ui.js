@@ -64,8 +64,8 @@
         list.appendChild(row(name,n));
       }
       append(top,list,ptext('Le pianificazioni precedenti saranno archiviate; tutti i '+p.preservedMovements+' movimenti storici restano invariati.'));
-      const confirm=section('Salva prima un backup');
-      append(confirm,ptext('Il backup include i tuoi dati personali e la cronologia della chat. Conserva il file in privato.'));
+      const confirmPanel=section('Salva prima un backup');
+      append(confirmPanel,ptext('Il backup include i tuoi dati personali e la cronologia della chat. Conserva il file in privato.'));
       const stack=node('div','stack'),error=node('div','inline-error');
       error.setAttribute('role','alert');
       const applyButton=action('2. Applica il nuovo piano','primary-button',async()=>{
@@ -92,8 +92,8 @@
           backButton.textContent='Backup preparato: verifica il download';
         }catch(e){backButton.disabled=false;error.textContent='Impossibile creare il backup. Nessuna modifica applicata.'}
       });
-      append(stack,backButton,applyButton);append(confirm,stack,error,ptext('La chiave Cloudflare e i messaggi già salvati non vengono modificati.'));
-      append(body,top,confirm);
+      append(stack,backButton,applyButton);append(confirmPanel,stack,error,ptext('La chiave Cloudflare e i messaggi già salvati non vengono modificati.'));
+      append(body,top,confirmPanel);
       sheet('Verifica il piano',body);
     }catch(e){
       patch=null;
