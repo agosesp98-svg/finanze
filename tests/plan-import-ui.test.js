@@ -5,7 +5,7 @@ const vm=require('node:vm');
 class FakeNode {
   constructor(tag='div'){
     this.tagName=tag;this.children=[];this.listeners=new Map();this.dataset={};
-    this.className='';this.textContent='';this.disabled=false;this.hidden=false;
+    this.className='';this.textContent='';this.disabled=false;this.hidden=false;this.style={};
     this.classList={
       add:()=>{},remove:()=>{},toggle:()=>{}
     };
