@@ -25,13 +25,13 @@ const plan={
     {name:'Future loan',monthly:80,nextDueDate:'2027-01-01',firstDueDate:'2027-01-01',
       recurrenceEnd:'2029-12-01',finalDueDate:'2029-12-01',rateChanges:[{date:'2029-11-01',amount:16.12}]},
     {name:'Balloon loan',monthly:100,nextDueDate:'2026-11-15',firstDueDate:'2026-11-15',
-      recurrenceEnd:'2028-12-15',finalPayment:12000,finalPaymentDate:'2029-01-01',fundedByGoal:true}
+      recurrenceEnd:'2028-12-15',finalPayment:36000,finalPaymentDate:'2029-01-01',fundedByGoal:true}
   ],
   recurring:[{name:'Test recurring',amount:33.3,dueDate:'2026-11-09',cadence:'Mensile',estimated:true}],
   expectedIncomes:[{name:'Client A',amount:500,expectedDate:''}],
   goals:[
     {name:'First goal',target:5000,current:0,targetDate:'2028-05-26',priorityRank:1},
-    {name:'Final loan',target:12000,current:0,targetDate:'2029-01-01',deadlinePrecision:'month',priorityRank:2},
+    {name:'Final loan',target:36000,current:0,targetDate:'2029-01-01',deadlinePrecision:'month',priorityRank:2},
     {name:'Emergency reserve',target:2000,current:0,targetDate:'',priorityRank:3}
   ]
 };
