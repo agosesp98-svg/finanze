@@ -5,6 +5,7 @@ const $=id=>document.getElementById(id);
 const money=n=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR'}).format(Math.round((Number(n)||0)*100)/100);
 const round=n=>Math.round((Number(n)||0)*100)/100;
 const today=()=>FinanceEngine.iso(new Date());
+const duePretty=date=>/^\d{4}-\d{2}-\d{2}$/.test(String(date||''))?new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short',year:'numeric'}).format(new Date(date+'T12:00:00')):'Data da verificare';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const setting=(arr,key,d)=>arr.find(x=>x.key===key)?.value??d;
 const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -91,14 +92,14 @@ function renderInstructions(plan){
  const allocations=plan.goals.map(g=>'<li><span>Accantona per '+esc(g.name)+'</span><strong>'+money(g.amount)+'</strong></li>').join('');
  const targets=plan.due.filter(x=>x.id!==Number(plan.source.id)&&x.amount>0)
   .map(x=>'<li><span>Verifica copertura addebiti su '+esc(x.name)+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
- const dueDetails=plan.dueItems.map(x=>'<li><span>'+esc(x.name)+' · '+esc(x.date)+(x.estimated?' · stimata':'')+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
- const loanAudit=plan.audit.map(l=>'<li><span>'+esc(l.name)+'<small class="salary-guide-reason">'+esc(l.status)+(l.next?' · prossima '+esc(l.next):'')+'</small></span><strong>'+((l.covered&&l.monthly>0)?money(l.monthly):'—')+'</strong></li>').join('');
+ const dueDetails=plan.dueItems.map(x=>'<li><span>'+esc(x.name)+' · '+esc(duePretty(x.date))+(x.estimated?' · stimata':'')+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
+ const loanAudit=plan.audit.map(l=>'<li><span>'+esc(l.name)+'<small class="salary-guide-reason">'+esc(l.status)+(l.next?' · prossima '+esc(duePretty(l.next)):'')+'</small></span><strong>'+((l.covered&&l.monthly>0)?money(l.monthly):'—')+'</strong></li>').join('');
  const missingLoans=plan.audit.filter(l=>!l.covered&&!l.status.startsWith('Prossima scadenza dopo'));
  const transfer=plan.spending&&plan.spending.id!==plan.source.id&&plan.life>0
   ?'<li><span>Sposta su '+esc(plan.spending.name)+' per le spese quotidiane</span><strong>'+money(plan.life)+'</strong></li>'
   :'<li><span>Tieni per le spese quotidiane su '+esc(plan.spending?.name||plan.source.name)+'</span><strong>'+money(plan.life)+'</strong></li>';
  host.innerHTML='<div class="salary-guide-status" role="status">Ripartizione indicativa dello stipendio di '+money(plan.available)+'.</div>'+
-  '<p class="salary-guide-note">Periodo verificato: '+esc(plan.start)+' → '+esc(plan.end)+' (escluso il giorno finale). Sono conteggiate solo le uscite non segnate come pagate.</p>'+
+  '<p class="salary-guide-note">Periodo verificato: '+esc(duePretty(plan.start))+' → '+esc(duePretty(plan.end))+' (escluso il giorno finale). Sono conteggiate solo le uscite non segnate come pagate.</p>'+
   '<ul class="salary-guide-steps">'+
   '<li><span>Riserva per rate e spese fisse fino al prossimo stipendio</span><strong>'+money(plan.bills)+'</strong></li>'+
   transfer+allocations+
