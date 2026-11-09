@@ -125,7 +125,8 @@ const FinanceEngine=(()=>{
     const end=monthKey(l.recurrenceEnd||l.finalDueDate||'');
     if(start&&key<start)return 0;
     if(end&&key>end)return 0;
-    let amount=Number(l.monthly||0);
+    if(l.monthlyPhaseComplete)return 0;
+    let amount=Number(l.baseMonthly??l.monthly??0);
     if(Array.isArray(l.rateChanges)){
       for(const change of [...l.rateChanges].sort((a,b)=>String(a.date).localeCompare(String(b.date)))){
         if(change.date&&monthKey(change.date)<=key)amount=Number(change.amount||0);
