@@ -11,12 +11,12 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20261109b">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261109c">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=20261109b">
-  <link rel="stylesheet" href="./ai-chat.css?v=20261109b">
-  <link rel="stylesheet" href="./plan-update.css?v=20261109b">
+  <link rel="stylesheet" href="./app.css?v=20261109c">
+  <link rel="stylesheet" href="./ai-chat.css?v=20261109c">
+  <link rel="stylesheet" href="./plan-update.css?v=20261109c">\n  <link rel="stylesheet" href="./salary-guide.css?v=20261109c">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -38,6 +38,20 @@
           <div class="spend-meta"><span id="spendDaily">€ 0 / giorno</span><span id="spendDays">—</span></div>
         </button>
         <section id="monthlyPlan" class="month-card" aria-label="Piano mensile"></section>
+        <section id="salaryGuide" class="salary-guide" aria-label="Organizza lo stipendio">
+          <div class="salary-guide-head"><div><small>DOPO L'ACCREDITO</small><h2>Organizza lo stipendio</h2></div><span class="salary-guide-tag">Piano operativo</span></div>
+          <p class="salary-guide-intro">Registra lo stipendio ricevuto. Ti indicherò quanto riservare per addebiti, vita quotidiana e obiettivi, e su quale conto organizzare le spese.</p>
+          <form id="salaryGuideForm" class="salary-guide-form">
+            <label>Stipendio incassato (€)<input id="salaryGuideAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Importo netto" required></label>
+            <label>Conto di accredito<select id="salaryGuideAccount" required></select></label>
+            <label>Conto per le spese quotidiane<select id="salaryGuideSpend" required></select></label>
+            <button id="salaryGuideSubmit" type="submit" class="primary-button">Registra stipendio e prepara il piano</button>
+          </form>
+          <p id="salaryGuideEmpty" class="salary-guide-alert" hidden>Per iniziare, aggiungi un conto spendibile dalle impostazioni.</p>
+          <p id="salaryGuideFeedback" class="salary-guide-feedback" role="status" aria-live="polite"></p>
+          <p id="salaryGuideLast" class="salary-guide-note" hidden></p>
+          <div id="salaryGuideResults" hidden></div>
+        </section>
 
         <div class="section-title"><h2>I tuoi soldi</h2><button type="button" onclick="document.getElementById('settingsBtn').click()">Gestisci</button></div>
         <div id="accountsStrip" class="account-scroll" aria-label="Conti"></div>
@@ -164,19 +178,19 @@
   <input id="planFileInput" type="file" accept="application/json,.json" hidden aria-label="Seleziona il piano privato da importare">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=20261109b"></script>
-  <script src="./engine.js?v=20261109b"></script>
-  <script src="./spendable-guard.js?v=20261109b"></script>
-  <script src="./app.js?v=20261109b"></script>
-  <script src="./appearance.js?v=20261109b"></script>
-  <script src="./insights.js?v=20261109b"></script>
-  <script src="./projection-details.js?v=20261109b"></script>
-  <script src="./recurrence-controls.js?v=20261109b"></script>
-  <script src="./goal-priority.js?v=20261109b"></script>
-  <script src="./plan-patch.js?v=20261109b"></script>
-  <script src="./plan-update-ui.js?v=20261109b"></script>
-  <script src="./ai-context.js?v=20261109b"></script>
-  <script src="./ai-chat.js?v=20261109b"></script>
+  <script src="./db.js?v=20261109c"></script>
+  <script src="./engine.js?v=20261109c"></script>
+  <script src="./spendable-guard.js?v=20261109c"></script>
+  <script src="./app.js?v=20261109c"></script>
+  <script src="./appearance.js?v=20261109c"></script>
+  <script src="./insights.js?v=20261109c"></script>
+  <script src="./projection-details.js?v=20261109c"></script>
+  <script src="./recurrence-controls.js?v=20261109c"></script>
+  <script src="./goal-priority.js?v=20261109c"></script>
+  <script src="./plan-patch.js?v=20261109c"></script>
+  <script src="./plan-update-ui.js?v=20261109c"></script>
+  <script src="./salary-guide.js?v=20261109c"></script>\n  <script src="./ai-context.js?v=20261109c"></script>
+  <script src="./ai-chat.js?v=20261109c"></script>
   <script>
     if('serviceWorker' in navigator){
       let refreshing=false;
