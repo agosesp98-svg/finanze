@@ -35,7 +35,9 @@ const FinanceGoalPriority=(()=>{
         let available=round(b.capacity);
         const allocations=[];
         for(const g of goals){
-          if(!eligible(g,key,salaryDay))continue;
+          // Unmet higher-priority goals keep absorbing surplus after their deadline.
+          // Late money cannot retroactively make a missed deadline feasible.
+          // This also prevents later goals appearing funded while earlier obligations remain unpaid.
           const required=Math.max(0,Number(g.target)-balances.get(g.id));
           const added=round(Math.min(required,available));
           if(added>0){
@@ -49,7 +51,7 @@ const FinanceGoalPriority=(()=>{
       }
       return goals.map(g=>{
         const due=g.targetDate||null;
-        const byDeadline=due?months.filter(m=>m.month<=monthKey(due)) :months;
+        const byDeadline=due?months.filter(m=>eligible(g,m.month,salaryDay)):months;
         const forecast=round(Number(g.current||0)+byDeadline.reduce((sum,m)=>sum+
           m.allocations.filter(a=>a.id===g.id).reduce((sum,a)=>sum+a.amount,0),0));
         const gap=round(Math.max(0,Number(g.target)-forecast));
@@ -64,7 +66,7 @@ const FinanceGoalPriority=(()=>{
     return{
       startMonth:iso(start).slice(0,7),endMonth:iso(new Date(start.getFullYear(),start.getMonth()+count-1,1)).slice(0,7),
       salaryLow,salaryHigh,
-      monthlyMethod:'Capacita mensile del motore, al netto di budget e rate; solo dal mese successivo, senza premi, 13/14 o crediti non incassati.',
+      monthlyMethod:'Capacita mensile del motore, al netto di budget e rate; solo dal mese successivo, senza premi, 13/14 o crediti non incassati. Un obiettivo scaduto e non coperto continua ad assorbire margine, ma la somma tardiva non riduce il gap alla data di scadenza.',
       continuationAssumption:String(read('employmentContinuation','unconfirmed')),
       goals:cautious.map((g,i)=>({...g,optimisticForecast:higher[i]?.forecast??g.forecast,optimisticGap:higher[i]?.gap??g.gap})),
       nextMonths:(()=>{
