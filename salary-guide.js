@@ -72,7 +72,7 @@ function renderInstructions(plan){
  const transfer=plan.spending&&plan.spending.id!==plan.source.id&&plan.life>0
   ?'<li><span>Sposta su '+esc(plan.spending.name)+' per le spese quotidiane</span><strong>'+money(plan.life)+'</strong></li>'
   :'<li><span>Tieni per le spese quotidiane su '+esc(plan.spending?.name||plan.source.name)+'</span><strong>'+money(plan.life)+'</strong></li>';
- host.innerHTML='<div class="salary-guide-status" role="status">Piano calcolato sullo stipendio registrato di '+money(plan.available)+'.</div>'+
+ host.innerHTML='<div class="salary-guide-status" role="status">Ripartizione indicativa dell’ultimo stipendio di '+money(plan.available)+'.</div>'+
   '<ul class="salary-guide-steps">'+
   '<li><span>Riserva per rate e spese fisse fino al prossimo stipendio</span><strong>'+money(plan.bills)+'</strong></li>'+
   transfer+allocations+
@@ -122,9 +122,7 @@ async function submit(e){
   if(duplicate)throw Error('Hai già registrato uno stipendio oggi con questa funzione. Controlla Movimenti per evitare duplicati.');
   if(!window.confirm('Registrare '+money(value)+' come stipendio ricevuto su '+plan.source.name+'? Il saldo verrà aumentato. I trasferimenti suggeriti non saranno eseguiti.')){feedback.textContent='Registrazione annullata: nessun dato modificato.';return}
   feedback.textContent='Registrazione dello stipendio…';
-  await FinanceDB.put('accounts',{...plan.source,balance:round(Number(plan.source.balance||0)+value)});
-  await FinanceDB.add('movements',{type:'income',date:today(),title:'Stipendio',category:'Stipendio',amount:round(value),accountId:plan.source.id,salaryGuide:true});
-  await FinanceDB.put('settings',{key:'salaryGuideSpendingAccount',value:spendingId});
+  await FinanceDB.recordSalary(value,plan.source.id,spendingId,today());
   feedback.textContent='Stipendio registrato. Piano operativo pronto.';
   // Show actual proposal immediately and update all main displays on reload.
   renderInstructions(plan);
