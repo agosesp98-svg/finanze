@@ -64,7 +64,7 @@ function calc(s,amount,sourceId,spendingId,at=new Date()){
   if(share>0){allocations.push({id:g.id,name:g.name,amount:share});remaining=round(remaining-share)}
  }
  // Remaining surplus is a cautious unassigned reserve, not automatically spent.
- return{source,spending,available,bills,life,fixed,budget,datedTotal,due:[...byAccount.values()],goals:allocations,reserve:remaining,
+ return{source,spending,available,bills,life,fixed,budget,datedTotal,due:[...byAccount.values()],dueItems:due.map(x=>({name:x.name,amount:Number(x.amount||0),date:x.dueDate,estimated:!!x.estimated})),goals:allocations,reserve:remaining,
   shortfall:round(Math.max(0,fixed+budget-available)),start,end};
 }
 function renderInstructions(plan){
@@ -72,6 +72,7 @@ function renderInstructions(plan){
  const allocations=plan.goals.map(g=>'<li><span>Accantona per '+esc(g.name)+'</span><strong>'+money(g.amount)+'</strong></li>').join('');
  const targets=plan.due.filter(x=>x.id!==Number(plan.source.id)&&x.amount>0)
   .map(x=>'<li><span>Verifica copertura addebiti su '+esc(x.name)+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
+ const dueDetails=plan.dueItems.map(x=>'<li><span>'+esc(x.name)+' · '+esc(x.date)+(x.estimated?' · stimata':'')+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
  const transfer=plan.spending&&plan.spending.id!==plan.source.id&&plan.life>0
   ?'<li><span>Sposta su '+esc(plan.spending.name)+' per le spese quotidiane</span><strong>'+money(plan.life)+'</strong></li>'
   :'<li><span>Tieni per le spese quotidiane su '+esc(plan.spending?.name||plan.source.name)+'</span><strong>'+money(plan.life)+'</strong></li>';
@@ -82,6 +83,7 @@ function renderInstructions(plan){
   transfer+allocations+
   (plan.reserve>0?'<li><span>Margine non assegnato · tienilo come riserva</span><strong>'+money(plan.reserve)+'</strong></li>':'')+
   '</ul>'+
+  '<details><summary>Scadenze non pagate nel ciclo ('+plan.dueItems.length+')</summary>'+(dueDetails?'<ul class="salary-guide-steps">'+dueDetails+'</ul>':'<p>Nessuna scadenza non pagata registrata nel periodo.</p>')+'</details>'+
   (targets?'<details><summary>Conti con addebiti programmati</summary><ul class="salary-guide-steps">'+targets+'</ul><p>Controlla i saldi effettivi prima di trasferire: gli importi indicati sono addebiti previsti, non trasferimenti aggiuntivi.</p></details>':'')+
   (plan.shortfall>0?'<p class="salary-guide-alert">Attenzione: mancano '+money(plan.shortfall)+' per coprire budget e uscite previste. Riduci il budget o rivedi il piano prima di accantonare.</p>':'')+
   '<p class="salary-guide-note">Le spese ricorrenti senza una scadenza registrata non sono quantificabili con certezza: controlla che tutte le bollette e gli abbonamenti abbiano una data.</p>'+
