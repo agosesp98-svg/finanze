@@ -11,7 +11,13 @@
   };
   const append=(parent,...items)=>{for(const item of items)if(item)parent.appendChild(item);return parent};
   const ptext=(s,cls='helper')=>node('p',cls,s);
-  let patch=null,backupReady=false,renderTimer=null;
+  let patch=null,backupReady=false,renderTimer=null,importBusy=false;
+  const nextPaint=()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  function setImportStatus(el,message,state='progress'){
+    el.textContent=message;
+    el.className='plan-import-feedback '+state;
+    el.setAttribute('aria-busy',state==='progress'?'true':'false');
+  }
 
   async function snapshot(){
     const names=FinanceDB.S;
@@ -40,15 +46,30 @@
     return append(node('div','allocation-row'),node('span','',label),node('strong','',value));
   }
   async function importFile(file){
-    if(!file)return;
+    if(!file||importBusy)return;
+    importBusy=true;
     patch=null;backupReady=false;
     const fileInput=$('planFileInput');
     fileInput.value='';
+    const loading=section('Importazione del piano');
+    const loadingStatus=node('p','plan-import-feedback progress');
+    loadingStatus.setAttribute('role','status');
+    loadingStatus.setAttribute('aria-live','polite');
+    append(loading,node('strong','',file.name),loadingStatus);
+    setImportStatus(loadingStatus,'Lettura del file JSON in corso…');
+    sheet('Importazione in corso',loading);
     try{
+      await nextPaint();
+      if(!/\.json$/i.test(file.name))throw Error('Seleziona un file con estensione .json.');
       if(file.size>140000)throw Error('Il piano supera la dimensione consentita.');
-      const data=JSON.parse(await file.text());
+      if(!file.size)throw Error('Il file selezionato è vuoto.');
+      let data;
+      try{data=JSON.parse(await file.text())}catch{throw Error('JSON non leggibile o non valido. Verifica il file e riprova.')}
+      setImportStatus(loadingStatus,'Verifica della struttura e dei dati del piano…');
+      await nextPaint();
       const prepared=FinancePlanPatch.prepare(await snapshot(),data);
       patch=data;
+      setImportStatus(loadingStatus,'File verificato. Preparazione del riepilogo…');
       const p=prepared.preview,body=document.createDocumentFragment(),top=section(p.name);
       append(top,ptext('Situazione dichiarata: '+p.asOf+'. L’importazione non invia dati a server esterni.'));
       const stale=(new Date(today())-new Date(p.asOf))/86400000;
@@ -70,7 +91,7 @@
       error.setAttribute('role','alert');
       feedback.setAttribute('role','status');
       feedback.setAttribute('aria-live','polite');
-      feedback.textContent='Passaggio 1 di 2: scarica il backup attuale.';
+      setImportStatus(feedback,'File JSON verificato correttamente. Passaggio 1 di 2: scarica il backup attuale.','success');
       const ackBox=node('div','plan-confirmation');
       ackBox.hidden=true;
       const checkRow=node('label','plan-confirmation-check');
@@ -79,21 +100,22 @@
       append(checkRow,checkbox,checkText);
       const finalButton=action('Conferma e aggiorna Finanze','primary-button',async()=>{
         if(!patch||!backupReady||!checkbox.checked){
-          feedback.textContent='Verifica il backup e seleziona la casella di conferma.';
+          setImportStatus(feedback,'Verifica il backup e seleziona la casella di conferma.','warning');
           return;
         }
         finalButton.disabled=true;
         applyButton.disabled=true;
         backButton.disabled=true;
         error.textContent='';
-        feedback.textContent='Aggiornamento in corso. Non chiudere l’app.';
+        setImportStatus(feedback,'Salvataggio del piano in corso… Non chiudere l’app.');
+        await nextPaint();
         try{
           const latest=FinancePlanPatch.prepare(await snapshot(),patch);
           await FinanceDB.replacePlanningStores(latest.stores);
+          setImportStatus(feedback,'Verifica del salvataggio…');
           const saved=await FinanceDB.get('settings','planPatchAppliedId');
           if(saved?.value!==patch.id)throw Error('Non riesco a verificare che il piano sia stato salvato.');
-          feedback.textContent='Piano aggiornato correttamente. Ricaricamento in corso…';
-          feedback.classList.add('success');
+          setImportStatus(feedback,'Piano importato e salvato correttamente. Aggiornamento della schermata…','success');
           try{sessionStorage.setItem('finanze-plan-update-success','1')}catch{}
           patch=null;
           setTimeout(()=>location.reload(),550);
@@ -101,7 +123,7 @@
           finalButton.disabled=false;
           applyButton.disabled=false;
           backButton.disabled=false;
-          feedback.textContent='Impossibile completare l’aggiornamento.';
+          setImportStatus(feedback,'Importazione non completata. Controlla il messaggio qui sotto e riprova.','warning');
           error.textContent=e.message||'Errore durante il salvataggio. I dati restano invariati.';
           console.error('Errore importazione piano:',e);
         }
@@ -109,29 +131,27 @@
       finalButton.disabled=true;
       checkbox.addEventListener('change',()=>{
         finalButton.disabled=!checkbox.checked;
-        feedback.textContent=checkbox.checked
+        setImportStatus(feedback,checkbox.checked
           ?'Pronto: premi «Conferma e aggiorna Finanze».'
-          :'Per continuare, conferma di aver verificato il backup.';
+          :'Per continuare, conferma di aver verificato il backup.',checkbox.checked?'success':'warning');
       });
       append(ackBox,ptext('Passaggio 2 di 2: conferma esplicita, senza finestre del browser.'),
         checkRow,finalButton);
       const applyButton=action('2. Applica il nuovo piano','primary-button',()=>{
         error.textContent='';
         if(!backupReady){
-          feedback.textContent='Prima devi scaricare il backup con il pulsante 1.';
-          feedback.classList.add('warning');
+          setImportStatus(feedback,'Prima devi scaricare il backup con il pulsante 1.','warning');
           backButton.focus();
           return;
         }
-        feedback.classList.remove('warning');
         ackBox.hidden=false;
-        feedback.textContent='Controlla la casella e conferma qui sotto.';
+        setImportStatus(feedback,'Controlla la casella e conferma qui sotto.');
         ackBox.scrollIntoView({block:'nearest',behavior:'smooth'});
       });
       const backButton=action('1. Scarica backup attuale','secondary-button',async()=>{
         if(!patch)return;
         backButton.disabled=true;
-        feedback.textContent='Preparazione del backup…';
+        setImportStatus(feedback,'Preparazione del backup…');
         error.textContent='';
         try{
           const data=await FinanceDB.exportAll();
@@ -143,11 +163,10 @@
           backupReady=true;
           backButton.disabled=false;
           backButton.textContent='1. Riscarica backup';
-          feedback.classList.remove('warning');
-          feedback.textContent='Backup preparato. Verifica che sia stato salvato, poi premi «Applica il nuovo piano».';
+          setImportStatus(feedback,'Backup preparato. Verifica che sia stato salvato, poi premi «Applica il nuovo piano».','success');
         }catch(e){
           backButton.disabled=false;
-          feedback.textContent='Non riesco a preparare il backup.';
+          setImportStatus(feedback,'Non riesco a preparare il backup.','warning');
           error.textContent='Nessuna modifica applicata: '+(e.message||'errore di esportazione');
         }
       });
@@ -158,10 +177,13 @@
       sheet('Verifica il piano',body);
     }catch(e){
       patch=null;
-      const body=section('Nessuna modifica effettuata');
-      body.appendChild(ptext(e.message||'File non valido.'));
-      sheet('File non valido',body);
-    }
+      const body=section('Importazione non riuscita');
+      const message=node('p','plan-import-feedback warning');
+      message.setAttribute('role','alert');
+      message.textContent=e.message||'File non valido.';
+      append(body,message,ptext('Il piano non è stato applicato. Puoi selezionare un altro file JSON.'),action('Riprova con un altro file','secondary-button',()=>fileInput.click()));
+      sheet('Importazione non riuscita',body);
+    }finally{importBusy=false}
   }
 
   function heading(title,meta){
@@ -257,10 +279,10 @@
     try{
       if(sessionStorage.getItem('finanze-plan-update-success')==='1'){
         sessionStorage.removeItem('finanze-plan-update-success');
-        const banner=node('div','plan-success-toast','Piano finanziario aggiornato correttamente.');
+        const banner=node('div','plan-success-toast','✓ Piano JSON importato correttamente. I dati sono stati salvati.');
         banner.setAttribute('role','status');
         document.body.appendChild(banner);
-        setTimeout(()=>banner.remove(),5500);
+        setTimeout(()=>banner.remove(),10000);
       }
     }catch(e){console.warn('Feedback importazione non disponibile',e)}
   });
