@@ -5,6 +5,8 @@ const FinanceApp=(()=>{
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   const norm=FinanceEngine.norm,money=v=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:2}).format(Number(v||0));
   const money0=v=>new Intl.NumberFormat('it-IT',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(Number(v||0));
+  const dueFmt=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short',year:'numeric'});
+  const dueLabel=value=>value&&parse(value)?dueFmt.format(parse(value)):'Data da definire';
   const dateFmt=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short'}),dateLong=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'long'}),monthFmt=new Intl.DateTimeFormat('it-IT',{month:'short',year:'numeric'});
   const today=()=>FinanceEngine.iso(new Date()),parse=FinanceEngine.parse,clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
   const CATEGORY_KEY='customExpenseCategories';
@@ -71,7 +73,7 @@ const FinanceApp=(()=>{
   function commitmentRow(x){
     const forecast=!!x.projected;
     const action=forecast?(x.sourceLiabilityId?`data-forecast-liability="${esc(x.sourceLiabilityId)}" data-forecast-date="${esc(x.dueDate)}"`:`data-forecast-commitment="${esc(x.sourceCommitmentId)}" data-forecast-date="${esc(x.dueDate)}"`):`data-commitment="${x.id}"`;
-    return `<button class="list-row ${forecast?'forecast-row':''}" ${action} type="button"><span class="row-icon orange">${svg('calendar')}</span><span class="row-copy"><b>${esc(x.name)}</b><span>${dateLong.format(parse(x.dueDate))}${x.cadence?` · ${esc(x.cadence)}`:''}${forecast?' · prevista':x.estimated?' · stimata':''}</span></span><span class="row-value">${money(x.amount)}</span><span class="chevron">›</span></button>`;
+    return `<button class="list-row ${forecast?'forecast-row':''}" ${action} type="button"><span class="row-icon orange">${svg('calendar')}</span><span class="row-copy"><b>${esc(x.name)}</b><span>${dateLong.format(parse(x.dueDate))}${x.cadence?` · ${esc(x.cadence)}`:''}${forecast?' · prevista':x.estimated?' · stimata':''}</span></span><span class="row-value row-value-stack"><strong>${money(x.amount)}</strong><small class="row-date">Scad. ${esc(dueLabel(x.dueDate))}</small></span><span class="chevron">›</span></button>`;
   }
   function openForecast(id,date){
     const item=state.commitments.find(c=>String(c.id)===String(id));
@@ -88,11 +90,43 @@ const FinanceApp=(()=>{
     const m=model();$('#planSummary').innerHTML=`<div class="plan-equation"><span>Stipendio netto</span><strong>${m.salaryNet?money(m.salaryNet):'Da impostare'}</strong><span>Budget</span><strong>− ${money(m.monthlyBudget)}</strong><span>Rate + spese fisse</span><strong>− ${money(m.fixed)}</strong><b class="result">Per ${esc(m.goal?.name||'gli obiettivi')}</b><strong class="result-value">${m.salaryNet?money(m.goalCapacity):'—'}</strong></div><p class="plan-caption">È lo stesso calcolo usato nella Home e negli Obiettivi.</p>`;
     $('#budgetList').innerHTML=state.budgets.some(b=>!b.archived&&FinanceEngine.budgetTarget(b)>0)?state.budgets.filter(b=>!b.archived&&FinanceEngine.budgetTarget(b)>0).map(b=>{const target=FinanceEngine.budgetTarget(b),ceiling=FinanceEngine.budgetCeiling(b),spent=Number(b.spent||0),pct=target?spent/target*100:0,cls=spent>ceiling?'danger':spent>target?'over':'';return `<button class="budget-row ${cls}" data-budget="${b.id}" type="button"><div class="budget-top"><b>${esc(b.name)}</b><strong>${money(Math.max(0,target-spent))}</strong></div><div class="budget-sub"><span>Speso ${money(spent)} su ${money(target)}</span><span>${Math.round(pct)}%</span></div><div class="progress blue"><i style="width:${clamp(pct,0,100)}%"></i></div></button>`}).join(''):'<div class="empty">Nessun budget.</div>';
     const scheduled=FinanceEngine.scheduledCommitments(state.commitments,new Date(),6,state.liabilities);$('#scheduledList').innerHTML=scheduled.length?scheduled.map(commitmentRow).join(''):'<div class="empty">Nessuna uscita programmata.</div>';
-    const liabilities=state.liabilities.filter(l=>!l.completed&&!l.archived);$('#liabilityList').innerHTML=liabilities.length?liabilities.map(l=>{const remaining=l.remaining!=null&&Number.isFinite(Number(l.remaining))?money(l.remaining):'Piano attivo',bits=[];if(l.installmentsRemaining!=null)bits.push(`${Number(l.installmentsRemaining)} ${Number(l.installmentsRemaining)===1?'rata rimasta':'rate rimaste'}`);if(l.finalDueDate)bits.push(`fine ${monthFmt.format(parse(l.finalDueDate))}`);else if(l.recurrenceEnd)bits.push(`rate fino a ${monthFmt.format(parse(l.recurrenceEnd))}`);if(l.finalPaymentDate)bits.push(`pagamento finale ${monthFmt.format(parse(l.finalPaymentDate))}`);return `<button class="list-row" data-liability="${l.id}" type="button"><span class="row-icon">${svg('card')}</span><span class="row-copy"><b>${esc(l.name)}</b><span>${remaining}${l.nextDueDate?` · prossima ${dateFmt.format(parse(l.nextDueDate))}`:''}</span>${bits.length?`<span class="rate-meta">${esc(bits.join(' · '))}</span>`:''}</span><span class="row-value">${money(FinanceEngine.liabilityAmountForMonth(l,String(l.nextDueDate||today()).slice(0,7)))}/m</span><span class="chevron">›</span></button>`}).join(''):'<div class="empty">Nessuna rata attiva.</div>';
+    const liabilities=state.liabilities.filter(l=>!l.completed&&!l.archived);
+    $('#liabilityList').innerHTML=liabilities.length?liabilities.map(l=>{
+      const remaining=l.remaining!=null&&Number.isFinite(Number(l.remaining))?money(l.remaining):'Piano attivo';
+      const bits=[];
+      if(l.installmentsRemaining!=null)bits.push(`${Number(l.installmentsRemaining)} ${Number(l.installmentsRemaining)===1?'rata rimasta':'rate rimaste'}`);
+      if(l.finalDueDate)bits.push(`fine ${dueLabel(l.finalDueDate)}`);
+      else if(l.recurrenceEnd)bits.push(`rate fino al ${dueLabel(l.recurrenceEnd)}`);
+      if(l.finalPaymentDate)bits.push(`pagamento finale ${dueLabel(l.finalPaymentDate)}`);
+      const next=scheduled.find(x=>String(x.liabilityId)===String(l.id)||(l.scheduleKey&&String(x.liabilityKey)===String(l.scheduleKey)));
+      const nextDate=next?.dueDate||l.nextDueDate||l.finalPaymentDate||'';
+      const final=nextDate&&l.finalPaymentDate===nextDate&&Number(l.finalPayment||0)>0;
+      const amount=next?.amount??(final?Number(l.finalPayment):FinanceEngine.liabilityAmountForMonth(l,String(nextDate||today()).slice(0,7)));
+      return `<button class="list-row" data-liability="${l.id}" type="button">
+        <span class="row-icon">${svg('card')}</span>
+        <span class="row-copy"><b>${esc(l.name)}</b><span>${remaining}</span>${bits.length?`<span class="rate-meta">${esc(bits.join(' · '))}</span>`:''}</span>
+        <span class="row-value row-value-stack"><strong>${money(amount)}</strong><small class="row-date">${final?'Finale':'Scad.'} ${esc(dueLabel(nextDate))}</small></span>
+        <span class="chevron">›</span></button>`;
+    }).join(''):'<div class="empty">Nessuna rata attiva.</div>';
     renderProjection();renderHistory();
   }
 
-  function renderProjection(){const host=$('#projectionList');if(!host)return;const rows=FinanceEngine.projection(state,6);host.innerHTML=rows.map(r=>`<div class="projection-row"><b>${monthFmt.format(r.date)}</b><strong>${money0(r.capacity)}</strong><span>Rate/fisse ${money0(r.fixed)}</span><span class="${r.gap>0?'warn':'good'}">${r.gap>0?`−${money0(r.gap)} dal target`:'margine obiettivo'}</span></div>`).join('')}
+  function renderProjection(){
+    const host=$('#projectionList');if(!host)return;
+    const rows=FinanceEngine.projection(state,6);
+    const due=FinanceEngine.scheduledCommitments(state.commitments,new Date(),6,state.liabilities)
+      .filter(x=>(x.liabilityId||x.liabilityKey)&&x.active!==false&&!x.paidDate);
+    host.innerHTML=rows.map(r=>{
+      const key=FinanceEngine.iso(r.date).slice(0,7);
+      const installments=due.filter(x=>String(x.dueDate||'').slice(0,7)===key);
+      const detail=installments.length
+        ?`<small class="projection-dates">Scadenze: ${installments.slice(0,4).map(x=>`${esc(x.name)} · ${esc(dueLabel(x.dueDate))}`).join(' · ')}${installments.length>4?' · +'+(installments.length-4)+' altre':''}</small>`
+        :'';
+      return `<div class="projection-row"><b>${monthFmt.format(r.date)}</b><strong>${money0(r.capacity)}</strong>
+        <span>Rate/fisse ${money0(r.fixed)}</span><span class="${r.gap>0?'warn':'good'}">${r.gap>0?`−${money0(r.gap)} dal target`:'margine obiettivo'}</span>
+        ${detail}</div>`;
+    }).join('');
+  }
   function renderHistory(){const host=$('#historyList');if(!host)return;const h=Array.isArray(setting('budgetCycleHistory',[]))?setting('budgetCycleHistory',[]):[];host.innerHTML=h.length?h.slice(0,6).map(x=>`<div class="history-row"><b>${esc(x.cycle)}</b><strong>${money0(x.budgetSpent||0)}</strong><span>Speso nel ciclo</span><span>Target ${money0(x.budgetTarget||0)}</span></div>`).join(''):'<div class="empty">Lo storico comparirà dal prossimo ciclo stipendio.</div>'}
 
   function renderGoals(){const m=model(),active=state.goals.filter(g=>!g.completed&&Number(g.target||0)>Number(g.current||0));$('#goalCapacity').textContent=m.salaryNet?`${money(m.goalCapacity)} disponibili nel mese tipo`:'Imposta lo stipendio per calcolare la capacità mensile.';$('#goalsList').innerHTML=active.length?active.map(g=>{const s=FinanceEngine.goalStats(g),need=s.monthly?`${money0(s.monthly)}/mese`:'Senza scadenza';return `<article class="goal-card"><h3>${esc(g.name)}</h3><div class="goal-amount">${money(s.current)} <span style="font-size:15px;color:var(--secondary);font-weight:600">/ ${money(s.target)}</span></div><div class="progress green"><i style="width:${s.pct}%"></i></div><div class="goal-meta"><span>${Math.round(s.pct)}% · ${money(s.remaining)} mancanti</span><span>${need}</span></div><div class="goal-actions"><button class="primary" data-contribute="${g.id}" type="button">Accantona</button><button class="secondary" data-goal="${g.id}" type="button">Modifica</button></div></article>`}).join(''):'<div class="empty">Nessun obiettivo attivo.</div>'}
