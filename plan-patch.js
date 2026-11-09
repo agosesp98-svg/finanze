@@ -114,7 +114,7 @@ const FinancePlanPatch=(()=>{
     for(const c of p.recurring){
       add('commitments',{
         name:c.name,amount:Number(c.amount),dueDate:c.dueDate,firstDueDate:c.firstDueDate||c.dueDate,
-        recurrenceEnd:c.recurrenceEnd||'',cadence:c.cadence||'Mensile',recurring:true,estimated:!!c.estimated,
+        recurrenceEnd:c.recurrenceEnd||'',cadence:c.cadence||'Mensile',recurring:true,estimated:!!c.estimated,variableAmount:!!c.variableAmount,
         active:true,accountId:primary.id,note:c.note||''
       });
     }
