@@ -19,3 +19,16 @@
 .plan-expected-incomes>.helper{line-height:1.5}
 @media(max-width:385px){.plan-priority-data{display:grid;gap:3px}.plan-priority-data strong{text-align:left}.plan-priority-head>span:last-child{font-size:10px}}
 @media(prefers-reduced-transparency:reduce){.plan-priority-surface{background:var(--surface-solid);backdrop-filter:none;-webkit-backdrop-filter:none}}
+
+/* Plan import: visible status and an explicit iPhone-safe confirmation. */
+.plan-import-feedback{padding:12px 13px;border-radius:12px;background:var(--blue-soft);color:var(--text);font-size:13px;line-height:1.5;margin:13px 0 0}
+.plan-import-feedback.warning{background:var(--orange-soft);color:var(--orange)}
+.plan-import-feedback.success{background:var(--green-soft);color:var(--green)}
+.plan-confirmation{margin:14px 0 0;padding:14px;border-radius:16px;border:1px solid var(--separator);background:var(--surface-3)}
+.plan-confirmation[hidden]{display:none!important}
+.plan-confirmation .helper{margin:0 0 12px}
+.plan-confirmation-check{display:flex;align-items:flex-start;gap:11px;cursor:pointer;font-size:13px;line-height:1.5;padding:3px 0 12px}
+.plan-confirmation-check input{flex:0 0 19px;width:19px;height:19px;margin:2px 0 0;accent-color:var(--blue)}
+.plan-confirmation .primary-button{width:100%;min-height:48px}
+.plan-confirmation .primary-button:disabled{opacity:.45;cursor:not-allowed}
+.plan-success-toast{position:fixed;z-index:99999;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--surface-solid);border:1px solid var(--separator);box-shadow:0 12px 40px rgba(0,0,0,.18);border-radius:14px;padding:12px 16px;min-width:min(90vw,300px);max-width:calc(100vw - 32px);text-align:center;color:var(--green);font-size:13px;font-weight:700;line-height:1.4}
