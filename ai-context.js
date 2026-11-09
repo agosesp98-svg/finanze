@@ -34,7 +34,7 @@ const FinanzeAIContext=(()=>{
     const commitments=snapshot.commitments||[],liabilities=snapshot.liabilities||[];
     const movements=snapshot.movements||[],expectedIncomes=snapshot.expectedIncomes||[];
     const model=engine.calculate(snapshot,now);
-    const upcoming=engine.scheduledCommitments(commitments,now,3)
+    const upcoming=engine.scheduledCommitments(commitments,now,3,liabilities)
       .filter(c=>c.dueDate>=engine.iso(now)).slice(0,24);
     const fixedBreakdown=engine.fixedBreakdown(liabilities,commitments,now);
     return {
