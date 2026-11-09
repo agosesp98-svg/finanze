@@ -206,7 +206,9 @@ const FinanceEngine=(()=>{
   function calculate({accounts=[],budgets=[],commitments=[],liabilities=[],goals=[],settings=[]},now=new Date()){
     const today=iso(now),salary=salaryDate(settings,now);
     const total=accounts.reduce((s,a)=>s+Number(a.balance||0),0);
-    const protectedTotal=accounts.filter(a=>a.protected).reduce((s,a)=>s+Number(a.balance||0),0);
+    const protectedTotal=accounts.filter(a=>a.protected&&!a.archived).reduce((s,a)=>s+Number(a.balance||0),0);
+    const goalSavings=goals.filter(g=>!g.completed&&!g.archived).reduce((sum,g)=>sum+Math.max(0,Number(g.current||0)),0);
+    const unbankedSavingsReserve=Math.max(0,goalSavings-protectedTotal);
     const ordinary=total-protectedTotal;
     const activeDue=scheduledCommitments(commitments,now,6,liabilities).filter(c=>String(c.dueDate)<=salary);
     const due=activeDue.reduce((s,c)=>s+Number(c.amount||0),0);
@@ -220,7 +222,7 @@ const FinanceEngine=(()=>{
     const primaryShortfall=Number(primaryCoverage?.shortfall||0);
     const blockingShortfall=Math.max(overallShortfall,fundingShortfall);
     const budgetRemaining=budgets.reduce((s,b)=>s+Math.max(0,budgetTarget(b)-Number(b.spent||0)),0);
-    const afterDue=Math.max(0,ordinary-due);
+    const afterDue=Math.max(0,ordinary-due-unbankedSavingsReserve);
     const spendable=blockingShortfall>0?0:Math.max(0,Math.min(budgetRemaining,afterDue));
     const days=Math.max(1,daysBetween(today,salary)+1);
     const salaryNet=Number(setting(settings,'salaryNet',0)||0);
@@ -229,7 +231,7 @@ const FinanceEngine=(()=>{
     const rateTotal=fixedData.items.filter(x=>x.kind==='liability').reduce((s,x)=>s+x.amount,0),recurringTotal=fixedData.items.filter(x=>x.kind==='recurring').reduce((s,x)=>s+x.amount,0);
     const goalCapacity=Math.max(0,salaryNet-monthlyBudget-fixed);
     const goal=primaryGoal(goals,now),goalNeed=goal?goalStats(goal,now).monthly:null;
-    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,accountCoverage,fundingShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
+    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,accountCoverage,fundingShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,unbankedSavingsReserve,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
   }
 
   function monthSequence(now=new Date(),count=6){const out=[];for(let i=0;i<count;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1,12);out.push({key:iso(d).slice(0,7),date:d})}return out}
@@ -264,7 +266,7 @@ const FinanceEngine=(()=>{
       else if(Number(l.monthly||0)>0&&l.nextDueDate){const beyond=cutoff&&String(l.nextDueDate)>String(cutoff),exists=linked.some(c=>c.active!==false&&String(c.dueDate)===String(l.nextDueDate));if(!beyond&&!exists){await db.add('commitments',{name:l.name,amount:liabilityAmountForMonth(l,monthKey(l.nextDueDate)),dueDate:l.nextDueDate,cadence:'Mensile',estimated:false,active:true,recurring:true,generated:true,liabilityId:l.id,liabilityKey:l.scheduleKey||'',note:'Scadenza collegata al piano rate'});changed=true}}
     }
     const groups=new Map();for(const c of commitments){if(c.archived||c.liabilityId||c.liabilityKey)continue;const cadence=norm(c.cadence);if(!(c.recurring===true||cadence.includes('mensil')||cadence.includes('14 giorni')||cadence.includes('settiman')))continue;const key=norm(c.name);if(!key)continue;const old=groups.get(key);if(!old||String(c.dueDate||'')>String(old.dueDate||''))groups.set(key,c)}
-    const today=iso(now);for(const latest of groups.values()){if(latest.active!==false)continue;let next=nextDateByCadence(latest.dueDate,latest.cadence);if(!next)continue;while(next<today)next=nextDateByCadence(next,latest.cadence);if(latest.recurrenceEnd&&next>latest.recurrenceEnd)continue;if(commitments.some(c=>c.active!==false&&norm(c.name)===norm(latest.name)&&c.dueDate===next))continue;const copy={...latest};delete copy.id;delete copy.paidDate;delete copy.paidAmount;copy.dueDate=next;copy.active=true;copy.generated=true;copy.recurring=true;copy.estimated=false;await db.add('commitments',copy);changed=true}
+    const today=iso(now);for(const latest of groups.values()){if(latest.active!==false)continue;let next=nextDateByCadence(latest.dueDate,latest.cadence);if(!next)continue;while(next<today)next=nextDateByCadence(next,latest.cadence);if(latest.recurrenceEnd&&next>latest.recurrenceEnd)continue;if(commitments.some(c=>c.active!==false&&norm(c.name)===norm(latest.name)&&c.dueDate===next))continue;const copy={...latest};delete copy.id;delete copy.paidDate;delete copy.paidAmount;copy.dueDate=next;copy.active=true;copy.generated=true;copy.recurring=true;copy.estimated=!!(latest.variableAmount||latest.estimated);await db.add('commitments',copy);changed=true}
     return{changed};
   }
 
