@@ -64,23 +64,75 @@
         list.appendChild(row(name,n));
       }
       append(top,list,ptext('Le pianificazioni precedenti saranno archiviate; tutti i '+p.preservedMovements+' movimenti storici restano invariati.'));
-      const confirmPanel=section('Salva prima un backup');
-      append(confirmPanel,ptext('Il backup include i tuoi dati personali e la cronologia della chat. Conserva il file in privato.'));
-      const stack=node('div','stack'),error=node('div','inline-error');
+      const confirmPanel=section('Verifica e applica');
+      append(confirmPanel,ptext('Prima scarica un backup. Contiene dati personali e cronologia chat: conservalo in privato.'));
+      const stack=node('div','stack'),error=node('div','inline-error'),feedback=node('p','plan-import-feedback');
       error.setAttribute('role','alert');
-      const applyButton=action('2. Applica il nuovo piano','primary-button',async()=>{
-        if(!patch||!backupReady)return;
-        if(!confirm('Hai salvato il backup e verificato i saldi? Il nuovo piano sostituirà le vecchie pianificazioni, conservando tutti i movimenti.'))return;
+      feedback.setAttribute('role','status');
+      feedback.setAttribute('aria-live','polite');
+      feedback.textContent='Passaggio 1 di 2: scarica il backup attuale.';
+      const ackBox=node('div','plan-confirmation');
+      ackBox.hidden=true;
+      const checkRow=node('label','plan-confirmation-check');
+      const checkbox=node('input');checkbox.type='checkbox';
+      const checkText=node('span','','Ho verificato che il backup è stato salvato e che i saldi indicati nel piano sono corretti.');
+      append(checkRow,checkbox,checkText);
+      const finalButton=action('Conferma e aggiorna Finanze','primary-button',async()=>{
+        if(!patch||!backupReady||!checkbox.checked){
+          feedback.textContent='Verifica il backup e seleziona la casella di conferma.';
+          return;
+        }
+        finalButton.disabled=true;
         applyButton.disabled=true;
+        backButton.disabled=true;
+        error.textContent='';
+        feedback.textContent='Aggiornamento in corso. Non chiudere l’app.';
         try{
           const latest=FinancePlanPatch.prepare(await snapshot(),patch);
           await FinanceDB.replacePlanningStores(latest.stores);
-          patch=null;location.reload();
-        }catch(e){applyButton.disabled=false;error.textContent=e.message||'Aggiornamento non riuscito.'}
+          const saved=await FinanceDB.get('settings','planPatchAppliedId');
+          if(saved?.value!==patch.id)throw Error('Non riesco a verificare che il piano sia stato salvato.');
+          feedback.textContent='Piano aggiornato correttamente. Ricaricamento in corso…';
+          feedback.classList.add('success');
+          try{sessionStorage.setItem('finanze-plan-update-success','1')}catch{}
+          patch=null;
+          setTimeout(()=>location.reload(),550);
+        }catch(e){
+          finalButton.disabled=false;
+          applyButton.disabled=false;
+          backButton.disabled=false;
+          feedback.textContent='Impossibile completare l’aggiornamento.';
+          error.textContent=e.message||'Errore durante il salvataggio. I dati restano invariati.';
+          console.error('Errore importazione piano:',e);
+        }
       });
-      applyButton.disabled=true;
+      finalButton.disabled=true;
+      checkbox.addEventListener('change',()=>{
+        finalButton.disabled=!checkbox.checked;
+        feedback.textContent=checkbox.checked
+          ?'Pronto: premi «Conferma e aggiorna Finanze».'
+          :'Per continuare, conferma di aver verificato il backup.';
+      });
+      append(ackBox,ptext('Passaggio 2 di 2: conferma esplicita, senza finestre del browser.'),
+        checkRow,finalButton);
+      const applyButton=action('2. Applica il nuovo piano','primary-button',()=>{
+        error.textContent='';
+        if(!backupReady){
+          feedback.textContent='Prima devi scaricare il backup con il pulsante 1.';
+          feedback.classList.add('warning');
+          backButton.focus();
+          return;
+        }
+        feedback.classList.remove('warning');
+        ackBox.hidden=false;
+        feedback.textContent='Controlla la casella e conferma qui sotto.';
+        ackBox.scrollIntoView({block:'nearest',behavior:'smooth'});
+      });
       const backButton=action('1. Scarica backup attuale','secondary-button',async()=>{
+        if(!patch)return;
         backButton.disabled=true;
+        feedback.textContent='Preparazione del backup…';
+        error.textContent='';
         try{
           const data=await FinanceDB.exportAll();
           const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
@@ -88,11 +140,20 @@
           a.href=url;a.download='finanze-backup-prima-del-piano-'+today()+'.json';
           document.body.appendChild(a);a.click();a.remove();
           setTimeout(()=>URL.revokeObjectURL(url),60000);
-          backupReady=true;applyButton.disabled=false;
-          backButton.textContent='Backup preparato: verifica il download';
-        }catch(e){backButton.disabled=false;error.textContent='Impossibile creare il backup. Nessuna modifica applicata.'}
+          backupReady=true;
+          backButton.disabled=false;
+          backButton.textContent='1. Riscarica backup';
+          feedback.classList.remove('warning');
+          feedback.textContent='Backup preparato. Verifica che sia stato salvato, poi premi «Applica il nuovo piano».';
+        }catch(e){
+          backButton.disabled=false;
+          feedback.textContent='Non riesco a preparare il backup.';
+          error.textContent='Nessuna modifica applicata: '+(e.message||'errore di esportazione');
+        }
       });
-      append(stack,backButton,applyButton);append(confirmPanel,stack,error,ptext('La chiave Cloudflare e i messaggi già salvati non vengono modificati.'));
+      append(stack,backButton,applyButton);
+      append(confirmPanel,stack,feedback,ackBox,error,
+        ptext('Lo storico dei movimenti viene mantenuto. La configurazione Cloudflare resta invariata.'));
       append(body,top,confirmPanel);
       sheet('Verifica il piano',body);
     }catch(e){
@@ -193,5 +254,14 @@
     const host=$('planSummary');
     if(host)new MutationObserver(scheduleRender).observe(host,{childList:true});
     scheduleRender();
+    try{
+      if(sessionStorage.getItem('finanze-plan-update-success')==='1'){
+        sessionStorage.removeItem('finanze-plan-update-success');
+        const banner=node('div','plan-success-toast','Piano finanziario aggiornato correttamente.');
+        banner.setAttribute('role','status');
+        document.body.appendChild(banner);
+        setTimeout(()=>banner.remove(),5500);
+      }
+    }catch(e){console.warn('Feedback importazione non disponibile',e)}
   });
 })();
