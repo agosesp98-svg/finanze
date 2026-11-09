@@ -76,7 +76,8 @@ async function test(){
   const body=elements.sheetBody;
   const apply=find(body,'2. Applica il nuovo piano');
   const backup=find(body,'1. Scarica backup attuale');
-  assert.ok(apply,'apply button is visible');
+  assert.ok(apply,'apply button is visible. Sheet: '+elements.sheetTitle.textContent+
+    '. Rendered: '+(function walk(x){return [String(x.textContent||'').slice(0,140),...(x.children||[]).flatMap(walk)].filter(Boolean)})(body).join(' | '));
   assert.ok(backup,'backup button is visible');
   assert.equal(apply.disabled,false,'apply must not silently ignore clicks while backup absent');
   await apply.click();
