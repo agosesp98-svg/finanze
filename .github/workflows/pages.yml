@@ -47,6 +47,7 @@ jobs:
           node tests/ai-context.test.js
           node tests/ai-ui.test.js
           node tests/plan-update.test.js
+          node tests/plan-import-ui.test.js
           node tests/cloudflare-ai.test.mjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
