@@ -63,6 +63,7 @@ async function test(){
     Blob,Date,JSON,Intl,console,Number,Object,Math,String,
     URL:{createObjectURL:()=> 'blob:test',revokeObjectURL:()=>{}},
     setTimeout:fn=>{callbacks.push(fn);return callbacks.length},
+    requestAnimationFrame:fn=>fn(),
     clearTimeout:()=>{},
     MutationObserver:class {observe(){}},
     location:{reload:()=>{throw Error('reload must occur only after requested delay')}},
@@ -71,7 +72,7 @@ async function test(){
   };
   vm.runInNewContext(fs.readFileSync('plan-update-ui.js','utf8'),context);
   documentCallbacks.DOMContentLoaded();
-  const file={size:2500,text:async()=>JSON.stringify({kind:'finanze-plan-update',id:'test-private-patch'})};
+  const file={name:'piano-prova.json',size:2500,text:async()=>JSON.stringify({kind:'finanze-plan-update',id:'test-private-patch'})};
   await elements.planFileInput.fire('change',{target:{files:[file]}});
   const body=elements.sheetBody;
   const apply=find(body,'2. Applica il nuovo piano');
