@@ -95,5 +95,56 @@ const FinanceDB=(()=>{
     }
   }
 
-  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll};
+  // One IndexedDB transaction guarantees a complete plan migration or no changes.
+  // Movements are NEVER cleared, preserving the historic ledger.
+  async function replacePlanningStores(data){
+    const keys=S.filter(k=>k!=='movements');
+    if(!data||keys.some(k=>!Array.isArray(data[k])))throw Error('Piano incompleto.');
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(keys,'readwrite');
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Aggiornamento non completato.'));
+      tx.onabort=()=>reject(tx.error||new Error('Aggiornamento annullato.'));
+      for(const key of keys){
+        const store=tx.objectStore(key);
+        store.clear();
+        for(const entry of data[key])store.put(entry);
+      }
+    });
+  }
+
+  async function receiveExpectedIncome(id,accountId,amount,date){
+    const sum=Number(amount);
+    if(!Number.isFinite(sum)||sum<=0||!Number.isInteger(Number(id))||!Number.isInteger(Number(accountId))||
+       !/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Dati incasso non validi.');
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(['accounts','expectedIncomes','movements'],'readwrite');
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Salvataggio non completato.'));
+      tx.onabort=()=>reject(tx.error||new Error('Incasso annullato.'));
+      const incomes=tx.objectStore('expectedIncomes'),accounts=tx.objectStore('accounts');
+      let income=null,account=null;
+      const r1=incomes.get(Number(id));
+      r1.onsuccess=()=>{
+        income=r1.result;
+        if(!income||income.archived||income.status==='received'){tx.abort();return}
+        const r2=accounts.get(Number(accountId));
+        r2.onsuccess=()=>{
+          account=r2.result;
+          if(!account||account.archived||account.protected){tx.abort();return}
+          account.balance=Number(account.balance||0)+sum;
+          income.status='received';income.receivedDate=date;income.accountId=account.id;income.receivedAmount=sum;
+          accounts.put(account);incomes.put(income);
+          tx.objectStore('movements').add({
+            type:'income',date,title:income.name,amount:sum,accountId:account.id,
+            category:'Incasso credito',expectedIncomeId:income.id
+          });
+        };
+      };
+    });
+  }
+
+  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome};
 })();
