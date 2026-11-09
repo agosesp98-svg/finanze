@@ -1,0 +1,55 @@
+name: Public repository privacy guard
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the public code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Reject private files and obvious credentials
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, subprocess, sys
+
+          names = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          names = [p for p in names if p]
+          private_files = re.compile(r'(^|/)(?:\.env(?:\..*)?|\.dev\.vars(?:\..*)?|.*(?:backup|private|privato|personal-plan|piano-personale|credentials|secrets).*\.json|.*(?:estratto.conto|statement|movimenti).*\.csv|.*\.(?:xlsx?|ods|ofx|qfx|qif|pem|p12|pfx|sqlite3?|db))$', re.I)
+          secret_signatures = [
+              re.compile('gh' + 'p_[A-Za-z0-9]{30,}'),
+              re.compile('github_pat_' + '[A-Za-z0-9_]{30,}'),
+              re.compile('sk-' + '(?:proj-)?[A-Za-z0-9_-]{20,}'),
+              re.compile('xox[baprs]-' + '[A-Za-z0-9-]{15,}'),
+              re.compile('-----BEGIN ' + '(?:RSA |EC |OPENSSH )?PRIVATE KEY-----'),
+          ]
+          unsafe = []
+          for name in names:
+              path = pathlib.Path(name)
+              if private_files.search(name):
+                  unsafe.append((name, 'file privato o backup tracciato'))
+              if path.suffix.lower() not in ('.js', '.ts', '.html', '.json', '.md', '.toml', '.txt', '.yml', '.yaml', '.css'):
+                  continue
+              if name.startswith('.github/workflows/'):
+                  continue
+              try:
+                  content = path.read_text(encoding='utf-8')
+              except (UnicodeError, OSError):
+                  continue
+              if any(pattern.search(content) for pattern in secret_signatures):
+                  unsafe.append((name, 'possibile chiave privata'))
+          if unsafe:
+              for name, reason in unsafe:
+                  print(f'::error file={name}::{reason}')
+              sys.exit(1)
+          print('Controllo base superato: nessun backup privato o token riconoscibile nei file tracciati.')
+          PY
