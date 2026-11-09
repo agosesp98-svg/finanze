@@ -32,3 +32,9 @@
 .plan-confirmation .primary-button{width:100%;min-height:48px}
 .plan-confirmation .primary-button:disabled{opacity:.45;cursor:not-allowed}
 .plan-success-toast{position:fixed;z-index:99999;left:50%;bottom:calc(105px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--surface-solid);border:1px solid var(--separator);box-shadow:0 12px 40px rgba(0,0,0,.18);border-radius:14px;padding:12px 16px;min-width:min(90vw,300px);max-width:calc(100vw - 32px);text-align:center;color:var(--green);font-size:13px;font-weight:700;line-height:1.4}
+
+/* Explicit, accessible JSON import states. */
+.plan-import-feedback.progress{position:relative;padding-left:35px;background:var(--blue-soft);color:var(--text)}
+.plan-import-feedback.progress::before{content:'';position:absolute;left:12px;top:calc(50% - 7px);width:14px;height:14px;border:2px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:plan-import-spin .8s linear infinite}
+@keyframes plan-import-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.plan-import-feedback.progress::before{animation:none;border-top-color:var(--blue)}}
