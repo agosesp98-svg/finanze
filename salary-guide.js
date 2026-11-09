@@ -7,6 +7,7 @@ const round=n=>Math.round((Number(n)||0)*100)/100;
 const today=()=>FinanceEngine.iso(new Date());
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const setting=(arr,key,d)=>arr.find(x=>x.key===key)?.value??d;
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 let draft=null,busy=false;
 
 async function snapshot(){
@@ -63,8 +64,26 @@ function calc(s,amount,sourceId,spendingId,at=new Date()){
   const share=round(Math.min(required,remaining,months?Math.ceil(required/months*100)/100:remaining));
   if(share>0){allocations.push({id:g.id,name:g.name,amount:share});remaining=round(remaining-share)}
  }
+ // Audit of loan metadata: explain missing scheduled installments rather than silently dropping them.
+ const audit=s.liabilities.filter(l=>!l.archived).map(l=>{
+  const covered=due.some(d=>String(d.liabilityId)===String(l.id)||(l.scheduleKey&&d.liabilityKey===l.scheduleKey)
+    ||norm(d.name)===norm(l.name));
+  const next=l.nextDueDate||l.firstDueDate||'';
+  const final=l.recurrenceEnd||l.finalDueDate||'';
+  const paid=s.commitments.some(x=>!x.archived&&x.active===false&&x.paidDate&&
+    (String(x.liabilityId)===String(l.id)||(l.scheduleKey&&x.liabilityKey===l.scheduleKey))&&
+    x.dueDate>=start&&x.dueDate<end);
+  let status=covered?'Inclusa nel calcolo'
+    :l.completed?'Finanziamento segnato come completato'
+    :l.monthlyPhaseComplete||Number(l.monthly||0)<=0?'Rata mensile disattivata'
+    :next&&next>=end?'Prossima scadenza dopo il periodo'
+    :next&&next<start?'Scadenza precedente al ciclo: verifica avanzamento rate'
+    :paid?'Rata precedente pagata; verifica la prossima scadenza'
+    :'Nessuna rata non pagata generata nel periodo';
+  return{name:l.name,status,covered,next,final,monthly:Number(l.monthly||0)};
+ });
  // Remaining surplus is a cautious unassigned reserve, not automatically spent.
- return{source,spending,available,bills,life,fixed,budget,datedTotal,due:[...byAccount.values()],dueItems:due.map(x=>({name:x.name,amount:Number(x.amount||0),date:x.dueDate,estimated:!!x.estimated})),goals:allocations,reserve:remaining,
+ return{source,spending,available,bills,life,fixed,budget,datedTotal,audit,due:[...byAccount.values()],dueItems:due.map(x=>({name:x.name,amount:Number(x.amount||0),date:x.dueDate,estimated:!!x.estimated})),goals:allocations,reserve:remaining,
   shortfall:round(Math.max(0,fixed+budget-available)),start,end};
 }
 function renderInstructions(plan){
@@ -73,6 +92,8 @@ function renderInstructions(plan){
  const targets=plan.due.filter(x=>x.id!==Number(plan.source.id)&&x.amount>0)
   .map(x=>'<li><span>Verifica copertura addebiti su '+esc(x.name)+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
  const dueDetails=plan.dueItems.map(x=>'<li><span>'+esc(x.name)+' · '+esc(x.date)+(x.estimated?' · stimata':'')+'</span><strong>'+money(x.amount)+'</strong></li>').join('');
+ const loanAudit=plan.audit.map(l=>'<li><span>'+esc(l.name)+'<small class="salary-guide-reason">'+esc(l.status)+(l.next?' · prossima '+esc(l.next):'')+'</small></span><strong>'+((l.covered&&l.monthly>0)?money(l.monthly):'—')+'</strong></li>').join('');
+ const missingLoans=plan.audit.filter(l=>!l.covered&&!l.status.startsWith('Prossima scadenza dopo'));
  const transfer=plan.spending&&plan.spending.id!==plan.source.id&&plan.life>0
   ?'<li><span>Sposta su '+esc(plan.spending.name)+' per le spese quotidiane</span><strong>'+money(plan.life)+'</strong></li>'
   :'<li><span>Tieni per le spese quotidiane su '+esc(plan.spending?.name||plan.source.name)+'</span><strong>'+money(plan.life)+'</strong></li>';
@@ -83,7 +104,9 @@ function renderInstructions(plan){
   transfer+allocations+
   (plan.reserve>0?'<li><span>Margine non assegnato · tienilo come riserva</span><strong>'+money(plan.reserve)+'</strong></li>':'')+
   '</ul>'+
-  '<details><summary>Scadenze non pagate nel ciclo ('+plan.dueItems.length+')</summary>'+(dueDetails?'<ul class="salary-guide-steps">'+dueDetails+'</ul>':'<p>Nessuna scadenza non pagata registrata nel periodo.</p>')+'</details>'+
+  '<details open><summary>Scadenze non pagate nel ciclo ('+plan.dueItems.length+')</summary>'+(dueDetails?'<ul class="salary-guide-steps">'+dueDetails+'</ul>':'<p>Nessuna scadenza non pagata registrata nel periodo.</p>')+'</details>'+
+  (loanAudit?'<details><summary>Verifica finanziamenti ('+plan.audit.length+')</summary><ul class="salary-guide-steps">'+loanAudit+'</ul></details>':'')+
+  (missingLoans.length?'<p class="salary-guide-alert">Alcuni finanziamenti non risultano nel totale delle scadenze. Apri “Verifica finanziamenti” e controlla lo stato e la data della prossima rata prima di usare il margine per i risparmi.</p>':'')+
   (targets?'<details><summary>Conti con addebiti programmati</summary><ul class="salary-guide-steps">'+targets+'</ul><p>Controlla i saldi effettivi prima di trasferire: gli importi indicati sono addebiti previsti, non trasferimenti aggiuntivi.</p></details>':'')+
   (plan.shortfall>0?'<p class="salary-guide-alert">Attenzione: mancano '+money(plan.shortfall)+' per coprire budget e uscite previste. Riduci il budget o rivedi il piano prima di accantonare.</p>':'')+
   '<p class="salary-guide-note">Le spese ricorrenti senza una scadenza registrata non sono quantificabili con certezza: controlla che tutte le bollette e gli abbonamenti abbiano una data.</p>'+
@@ -111,7 +134,7 @@ async function render(){
   // Reconstruct last plan from stored salary event, never add the income twice on refresh.
   const priorSpending=setting(s.settings,'salaryGuideSpendingAccount',daily?.id||newest.accountId);
   if(accounts.some(a=>String(a.id)===String(priorSpending)))$('salaryGuideSpend').value=String(priorSpending);
-  renderInstructions(calc(s,Number(newest.amount),newest.accountId,$('salaryGuideSpend').value,new Date(newest.date+'T12:00:00')));
+  renderInstructions(calc(s,Number(newest.amount),newest.accountId,$('salaryGuideSpend').value,new Date()));
  }
 }
 async function submit(e){
@@ -141,7 +164,7 @@ document.addEventListener('DOMContentLoaded',()=>{
  $('salaryGuideForm').addEventListener('submit',submit);
  $('salaryGuideSpend').addEventListener('change',async()=>{
   const s=await snapshot();const income=s.movements.filter(m=>m.salaryGuide===true&&m.type==='income').sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id))[0];
-  if(income)renderInstructions(calc(s,Number(income.amount),income.accountId,$('salaryGuideSpend').value,new Date(income.date+'T12:00:00')));
+  if(income)renderInstructions(calc(s,Number(income.amount),income.accountId,$('salaryGuideSpend').value,new Date()));
  });
  render().catch(e=>{$('salaryGuideFeedback').textContent='Impossibile preparare il piano: '+e.message});
 });
