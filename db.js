@@ -150,7 +150,7 @@ const FinanceDB=(()=>{
   async function recordSalary(amount,accountId,spendingAccountId,date){
     const sum=Math.round(Number(amount)*100)/100,accountKey=Number(accountId);
     if(!Number.isFinite(sum)||sum<=0||!Number.isInteger(accountKey)||
-      !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(date)))throw Error('Dati stipendio non validi.');
+      !/^\d{4}-\d{2}-\d{2}$/.test(String(date)))throw Error('Dati stipendio non validi.');
     const db=await open();
     return new Promise((resolve,reject)=>{
       const tx=db.transaction(['accounts','movements','settings'],'readwrite');
