@@ -53,7 +53,7 @@ const FinanceEngine=(()=>{
   function scheduledCommitments(commitments=[],now=new Date(),months=6,liabilities=[]){
     const today=iso(now),span=clamp(Math.floor(Number(months)||6),1,24);
     const horizon=iso(new Date(now.getFullYear(),now.getMonth()+span,1,12));
-    const actual=commitments.filter(c=>!c.archived&&c.active!==false&&c.dueDate);
+    const actual=commitments.filter(c=>!c.archived&&c.active!==false&&!c.paidDate&&c.dueDate);
     const seen=new Set(commitments.filter(c=>!c.archived&&c.dueDate).map(c=>`${norm(c.name)}|${c.dueDate}`));
     const forecasts=[];
     for(const latest of recurringCommitments(commitments)){
