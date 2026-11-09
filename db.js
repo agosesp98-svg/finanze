@@ -146,5 +146,35 @@ const FinanceDB=(()=>{
     });
   }
 
-  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome};
+  // The receipt and balance update are one transaction: no partial salary credit.
+  async function recordSalary(amount,accountId,spendingAccountId,date){
+    const sum=Math.round(Number(amount)*100)/100,accountKey=Number(accountId);
+    if(!Number.isFinite(sum)||sum<=0||!Number.isInteger(accountKey)||
+      !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(date)))throw Error('Dati stipendio non validi.');
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(['accounts','movements','settings'],'readwrite');
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Salvataggio non completato.'));
+      tx.onabort=()=>reject(tx.error||new Error('Operazione annullata o stipendio già registrato.'));
+      const movements=tx.objectStore('movements'),accounts=tx.objectStore('accounts');
+      const r=movements.getAll();
+      r.onsuccess=()=>{
+        if(r.result.some(x=>x.type==='income'&&x.salaryGuide===true&&x.date===date)){tx.abort();return}
+        const accountRequest=accounts.get(accountKey);
+        accountRequest.onsuccess=()=>{
+          const account=accountRequest.result;
+          if(!account||account.archived||account.protected){tx.abort();return}
+          account.balance=Math.round((Number(account.balance||0)+sum)*100)/100;
+          accounts.put(account);
+          movements.add({type:'income',date,title:'Stipendio',category:'Stipendio',
+            amount:sum,accountId:account.id,salaryGuide:true});
+          if(Number.isInteger(Number(spendingAccountId)))
+            tx.objectStore('settings').put({key:'salaryGuideSpendingAccount',value:Number(spendingAccountId)});
+        };
+      };
+    });
+  }
+
+  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary};
 })();
