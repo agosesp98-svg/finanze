@@ -11,11 +11,12 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20261105d">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261109a">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=20261105d">
-  <link rel="stylesheet" href="./ai-chat.css?v=20261105d">
+  <link rel="stylesheet" href="./app.css?v=20261109a">
+  <link rel="stylesheet" href="./ai-chat.css?v=20261109a">
+  <link rel="stylesheet" href="./plan-update.css?v=20261109a">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -60,6 +61,7 @@
       <section id="view-plan" class="view">
         <div class="page-head"><div><h1>Piano</h1><p>Come viene distribuito il tuo denaro.</p></div></div>
         <div id="planSummary" class="plan-summary"></div>
+        <div id="planStrategy" class="plan-priority" hidden></div>
 
         <div class="section-title"><h2>Budget</h2><button type="button" data-new-budget>Nuovo</button></div>
         <div id="budgetList" class="list-card"></div>
@@ -69,6 +71,7 @@
 
         <div class="section-title"><h2>Rate e finanziamenti</h2><span>Automatici</span></div>
         <div id="liabilityList" class="list-card"></div>
+        <div id="incomeList" class="plan-expected-incomes" hidden></div>
 
         <div class="section-title"><h2>Prossimi mesi</h2><span>6 mesi</span></div>
         <div id="projectionList" class="projection"></div>
@@ -158,18 +161,22 @@
     <div class="sheet-grabber"></div><div class="sheet-head"><h2 id="sheetTitle">Dettaglio</h2><button class="icon-button" type="button" data-close-sheet aria-label="Chiudi">×</button></div><div id="sheetBody" class="sheet-body"></div>
   </section>
   <input id="backupInput" type="file" accept="application/json,.json" hidden>
+  <input id="planFileInput" type="file" accept="application/json,.json" hidden aria-label="Seleziona il piano privato da importare">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=20261105d"></script>
-  <script src="./engine.js?v=20261105d"></script>
-  <script src="./spendable-guard.js?v=20261105d"></script>
-  <script src="./app.js?v=20261105d"></script>
-  <script src="./appearance.js?v=20261105d"></script>
-  <script src="./insights.js?v=20261105d"></script>
-  <script src="./projection-details.js?v=20261105d"></script>
-  <script src="./recurrence-controls.js?v=20261105d"></script>
-  <script src="./ai-context.js?v=20261105d"></script>
-  <script src="./ai-chat.js?v=20261105d"></script>
+  <script src="./db.js?v=20261109a"></script>
+  <script src="./engine.js?v=20261109a"></script>
+  <script src="./spendable-guard.js?v=20261109a"></script>
+  <script src="./app.js?v=20261109a"></script>
+  <script src="./appearance.js?v=20261109a"></script>
+  <script src="./insights.js?v=20261109a"></script>
+  <script src="./projection-details.js?v=20261109a"></script>
+  <script src="./recurrence-controls.js?v=20261109a"></script>
+  <script src="./goal-priority.js?v=20261109a"></script>
+  <script src="./plan-patch.js?v=20261109a"></script>
+  <script src="./plan-update-ui.js?v=20261109a"></script>
+  <script src="./ai-context.js?v=20261109a"></script>
+  <script src="./ai-chat.js?v=20261109a"></script>
   <script>
     if('serviceWorker' in navigator){
       let refreshing=false;
