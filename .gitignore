@@ -1,0 +1,46 @@
+# Finanze — private financial data must never be committed.
+# Keep the public repository limited to app source and synthetic test fixtures.
+
+# Real exports, backups and imported plans
+*backup*.json
+*backup*.zip
+*private*.json
+*privato*.json
+*piano-personale*.json
+*personal-plan*.json
+*financial-data*.json
+*finanze-data*.json
+*movimenti*.csv
+*estratto-conto*.csv
+*statement*.csv
+*.xlsx
+*.xls
+*.ods
+*.ofx
+*.qfx
+*.qif
+
+# Environment, secrets and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*credentials*.json
+*secrets*.json
+*token*.json
+.wrangler/
+.dev.vars
+.dev.vars.*
+*.sqlite
+*.db
+*.sqlite3
+
+# Local and editor-generated files
+.DS_Store
+Thumbs.db
+node_modules/
+coverage/
+dist/
