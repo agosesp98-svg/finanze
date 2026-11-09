@@ -36,6 +36,9 @@ jobs:
           node --check ai-context.js
           node --check ai-chat.js
           node --check cloudflare-ai/worker.js
+          node --check plan-patch.js
+          node --check goal-priority.js
+          node --check plan-update-ui.js
           node --check sw.js
       - name: Run financial regression tests
         run: |
@@ -43,6 +46,7 @@ jobs:
           node tests/spendable-guard.test.js
           node tests/ai-context.test.js
           node tests/ai-ui.test.js
+          node tests/plan-update.test.js
           node tests/cloudflare-ai.test.mjs
       - name: Configure Pages
         uses: actions/configure-pages@v5
