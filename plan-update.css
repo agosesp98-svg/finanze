@@ -1,0 +1,21 @@
+/* Private financial update & goal forecast surfaces, token-based. */
+.plan-priority,.plan-expected-incomes{margin:18px 0 10px}
+.plan-priority-title{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:20px 2px 11px}
+.plan-priority-title h2{font-size:21px;letter-spacing:-.025em;font-weight:730;margin:0}
+.plan-priority-title>span{font-size:12px;color:var(--secondary);text-align:right}
+.plan-priority-surface{padding:7px 16px 16px;border-radius:22px;border:1px solid var(--separator);background:var(--glass);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.plan-priority-item{padding:15px 0 17px;border-bottom:1px solid var(--separator)}
+.plan-priority-item:last-of-type{border-bottom:0}
+.plan-priority-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;min-width:0}
+.plan-priority-head strong{font-size:15px;letter-spacing:-.02em;flex:1;min-width:0;overflow-wrap:anywhere}
+.plan-priority-head>span:last-child{font-size:11px;color:var(--secondary);white-space:nowrap}
+.plan-rank{display:grid;place-items:center;flex:0 0 25px;width:25px;height:25px;border-radius:8px;background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:760}
+.plan-priority-data{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:9px;font-size:12px;color:var(--secondary)}
+.plan-priority-data strong{font-size:12px;text-align:right;white-space:nowrap}
+.plan-priority-item>small{display:block;margin-top:9px;color:var(--secondary);font-size:11px}
+.plan-priority-surface>.helper{margin-top:12px;line-height:1.5}
+.plan-danger{color:var(--red)}.plan-good{color:var(--green)}
+.plan-warning{padding:12px 13px;border-radius:12px;background:var(--orange-soft);color:var(--orange);font-size:13px;line-height:1.5;margin:12px 0}
+.plan-expected-incomes>.helper{line-height:1.5}
+@media(max-width:385px){.plan-priority-data{display:grid;gap:3px}.plan-priority-data strong{text-align:left}.plan-priority-head>span:last-child{font-size:10px}}
+@media(prefers-reduced-transparency:reduce){.plan-priority-surface{background:var(--surface-solid);backdrop-filter:none;-webkit-backdrop-filter:none}}
