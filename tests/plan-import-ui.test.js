@@ -102,6 +102,6 @@ async function test(){
   await final.click();
   assert.equal(writes.length,1,'one atomic local update');
   assert.ok(storage.get('finanze-plan-update-success'),'success confirmation survives app reload');
-  assert.ok(find(body,'Piano aggiornato correttamente. Ricaricamento in corso…'));
+  assert.ok(find(body,'Piano importato e salvato correttamente. Aggiornamento della schermata…'));
 }
 test().then(()=>console.log('Private import UX confirmation tests: OK')).catch(e=>{console.error(e);process.exit(1)});
