@@ -40,6 +40,11 @@
           <div class="spend-meta"><span id="spendDaily">€ 0 / giorno</span><span id="spendDays">—</span></div>
         </button>
         <section id="monthlyPlan" class="month-card" aria-label="Piano mensile"></section>
+        <button class="loan-shortcut home-loan-shortcut" type="button" data-jump-loans aria-label="Apri Rate e finanziamenti">
+          <span class="loan-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/></svg></span>
+          <span class="loan-shortcut-copy"><strong>Rate e finanziamenti</strong><small id="homeLoanSummary">Gestisci rate, scadenze e importi</small></span>
+          <span class="loan-shortcut-chevron" aria-hidden="true">›</span>
+        </button>
         <section id="salaryGuide" class="salary-guide" aria-label="Organizza lo stipendio">
           <div class="salary-guide-head"><div><small>DOPO L'ACCREDITO</small><h2>Organizza lo stipendio</h2></div><span class="salary-guide-tag">Piano operativo</span></div>
           <p class="salary-guide-intro">Registra lo stipendio ricevuto. Ti indicherò quanto riservare per addebiti, vita quotidiana e obiettivi, e su quale conto organizzare le spese.</p>
@@ -77,6 +82,11 @@
       <section id="view-plan" class="view">
         <div class="page-head"><div><h1>Piano</h1><p>Come viene distribuito il tuo denaro.</p></div></div>
         <div id="planSummary" class="plan-summary"></div>
+        <button class="loan-shortcut plan-loan-shortcut" type="button" data-jump-loans aria-label="Vai a Rate e finanziamenti">
+          <span class="loan-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/></svg></span>
+          <span class="loan-shortcut-copy"><strong>Vai a Rate e finanziamenti</strong><small>Modifica scadenze, rate e pagamenti finali</small></span>
+          <span class="loan-shortcut-chevron" aria-hidden="true">›</span>
+        </button>
         <div id="planStrategy" class="plan-priority" hidden></div>
 
         <div class="section-title"><h2>Budget</h2><button type="button" data-new-budget>Nuovo</button></div>
@@ -85,8 +95,10 @@
         <div class="section-title"><h2>Uscite programmate</h2><button type="button" data-new-commitment>Nuova</button></div>
         <div id="scheduledList" class="list-card"></div>
 
-        <div class="section-title"><h2>Rate e finanziamenti</h2><span>Automatici</span></div>
-        <div id="liabilityList" class="list-card"></div>
+        <section id="loanManagement" aria-labelledby="loanManagementTitle">
+          <div class="section-title loan-section-heading"><h2 id="loanManagementTitle" tabindex="-1">Rate e finanziamenti</h2><span class="loan-heading-meta" id="loanCount">Scadenze e rate</span></div>
+          <div id="liabilityList" class="list-card"></div>
+        </section>
         <div id="incomeList" class="plan-expected-incomes" hidden></div>
 
         <div class="section-title"><h2>Prossimi mesi</h2><span>6 mesi</span></div>
