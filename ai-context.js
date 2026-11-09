@@ -34,13 +34,15 @@ const FinanzeAIContext=(()=>{
     const commitments=snapshot.commitments||[],liabilities=snapshot.liabilities||[];
     const movements=snapshot.movements||[],expectedIncomes=snapshot.expectedIncomes||[];
     const model=engine.calculate(snapshot,now);
+    const goalPlanner=typeof FinanceGoalPriority!=='undefined'?FinanceGoalPriority:(typeof require==='function'?require('./goal-priority.js'):null);
+    const feasibility=goalPlanner?goalPlanner.project(snapshot,now,36):null;
     const upcoming=engine.scheduledCommitments(commitments,now,3,liabilities)
       .filter(c=>c.dueDate>=engine.iso(now)).slice(0,24);
     const fixedBreakdown=engine.fixedBreakdown(liabilities,commitments,now);
     return {
       snapshotDate:engine.iso(now),
       disclaimer:'Dati locali indicativi. Le scadenze projected sono previsioni, non pagamenti gia eseguiti. Non sommare la spesa storica alle rate future come se fossero nuove spese.',
-      accounts:accounts.slice(0,12).map(a=>({
+      accounts:accounts.filter(a=>!a.archived).slice(0,12).map(a=>({
         name:text(a.name),balance:round(a.balance),protected:!!a.protected
       })),
       thisCycle:{
@@ -54,9 +56,10 @@ const FinanzeAIContext=(()=>{
         shortfallBeforeSalary:round(model.blockingShortfall),
         currentLiquidBalance:round(model.ordinary),
         protectedSavings:round(model.protectedTotal),
+        goalFundsReservedOnOrdinaryAccounts:round(model.unbankedSavingsReserve),
         budgetRemaining:round(model.budgetRemaining)
       },
-      budgets:budgets.slice(0,18).map(b=>({
+      budgets:budgets.filter(b=>!b.archived&&engine.budgetTarget(b)>0).slice(0,18).map(b=>({
         name:text(b.name),monthlyLimit:round(engine.budgetTarget(b)),
         spentInCurrentCycle:round(b.spent),
         remaining:round(Math.max(0,engine.budgetTarget(b)-Number(b.spent||0)))
@@ -64,7 +67,7 @@ const FinanzeAIContext=(()=>{
       recurringAndFixedCosts:fixedBreakdown.items.slice(0,24).map(item=>({
         name:text(item.name),kind:item.kind,monthlyEquivalent:round(item.amount)
       })),
-      liabilities:liabilities.filter(l=>!l.completed).slice(0,20).map(l=>({
+      liabilities:liabilities.filter(l=>!l.completed&&!l.archived).slice(0,20).map(l=>({
         name:text(l.name),monthlyPayment:round(l.monthly),
         remainingBalance:l.remaining===null||l.remaining===undefined?null:round(l.remaining),
         installmentsRemaining:l.installmentsRemaining??null,
@@ -83,11 +86,16 @@ const FinanzeAIContext=(()=>{
         status:text(x.status||'Non confermato',30),
         note:'Entrata attesa: non considerare gia incassata'
       })),
-      goals:goals.filter(g=>!g.completed).slice(0,8).map(g=>({
+      goals:goals.filter(g=>!g.completed&&!g.archived).slice(0,8).map(g=>({
         name:text(g.name),target:round(g.target),saved:round(g.current),
         deadline:text(g.targetDate,10),
         indicativeMonthlyNeed:round(engine.goalStats(g,now).monthly)
       })),
+      prioritizedGoalFeasibility:feasibility?{
+        method:feasibility.monthlyMethod,
+        employmentExtensionAssumed:feasibility.continuationAssumption,
+        goals:feasibility.goals.slice(0,5).map(g=>({name:g.name,priority:g.rank,deadline:g.deadline,forecast:g.forecast,shortfall:g.gap,optimisticShortfall:g.optimisticGap}))
+      }:null,
       last90DaysOfRecordedSpending:recentSpending(movements,now),
       sixMonthPlan:engine.projection(snapshot,6,now).map(m=>({
         month:m.month,monthlyBudget:round(m.monthlyBudget),
