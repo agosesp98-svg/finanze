@@ -32,7 +32,7 @@
       const overallShortfall=Math.max(0,due-ordinary);
       const primaryReserveShortfall=Math.max(0,due-primaryBalance);
       const blockingShortfall=Math.max(Number(result.blockingShortfall||0),overallShortfall,primaryReserveShortfall);
-      const afterDue=Math.max(0,ordinary-due);
+      const afterDue=Math.max(0,ordinary-due-Number(result.unbankedSavingsReserve||0));
       const spendable=blockingShortfall>0?0:Math.max(0,Math.min(Number(result.budgetRemaining||0),afterDue));
       const days=Math.max(1,Math.ceil((engine.parse(horizon)-engine.parse(iso(now)))/86400000)+1);
 
