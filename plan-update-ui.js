@@ -133,7 +133,7 @@
       const p=FinanceGoalPriority.project(s,new Date(),36);
       const surface=node('div','plan-priority-surface');
       p.goals.forEach(g=>surface.appendChild(goalCard(g,p.salaryHigh>p.salaryLow)));
-      surface.appendChild(ptext('Proiezione da '+p.startMonth+'. Esclude il mese in corso, crediti non incassati, tredicesima e quattordicesima. La continuità lavorativa dopo la data confermata resta un’ipotesi.'));
+      surface.appendChild(ptext('Proiezione da '+p.startMonth+'. Esclude il mese in corso, crediti non incassati, tredicesima e quattordicesima. Un obiettivo scaduto resta prioritario: i risparmi successivi non possono renderlo coperto in tempo. La prosecuzione del lavoro resta un’ipotesi.'));
       goalsHost.replaceChildren(heading('Priorità di risparmio','Scenario prudente'),surface);
       const pending=s.expectedIncomes.filter(x=>!x.archived&&x.status!=='received');
       const list=node('div','list-card');
