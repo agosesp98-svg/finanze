@@ -13,20 +13,24 @@ async function snapshot(){
  const names=FinanceDB.S,values=await Promise.all(names.map(n=>FinanceDB.getAll(n)));
  return Object.fromEntries(names.map((n,i)=>[n,values[i]]));
 }
-function nextPayDay(settings,now=new Date()){
+function salaryWindow(settings,now=new Date()){
  const day=Math.max(1,Math.min(28,Number(setting(settings,'salaryDay',setting(settings,'salaryLatestDay',10)))||10));
- let target=new Date(now.getFullYear(),now.getMonth()+1,day,12);
- return FinanceEngine.iso(target);
+ // Audit includes the previous salary cycle, but only unpaid obligations reserve money.
+ const previous=new Date(now.getFullYear(),now.getMonth()-1,day,12);
+ const next=new Date(now.getFullYear(),now.getMonth()+1,day,12);
+ return{start:FinanceEngine.iso(previous),end:FinanceEngine.iso(next),day};
 }
 function calc(s,amount,sourceId,spendingId,at=new Date()){
  const accounts=s.accounts.filter(x=>!x.archived);
  const source=accounts.find(x=>String(x.id)===String(sourceId));
  const spending=accounts.find(x=>String(x.id)===String(spendingId));
  if(!source)throw Error('Seleziona il conto su cui ricevi lo stipendio.');
- const start=FinanceEngine.iso(at),end=nextPayDay(s.settings,at);
- // Forecast to the next pay cycle, without counting paid/archived items.
+ const {start,end}=salaryWindow(s.settings,at);
+ // Review the whole requested window (previous 10th to next 10th).
+ // Active unpaid overdue items remain due; inactive/paid records never reserve cash.
  const due=FinanceEngine.scheduledCommitments(s.commitments,at,3,s.liabilities)
-   .filter(x=>x.dueDate>=start&&x.dueDate<end&&!x.fundedByGoal);
+   .filter(x=>x.dueDate>=start&&x.dueDate<end&&x.active!==false&&!x.archived
+     &&!x.paidDate&&!x.fundedByGoal);
  const byAccount=new Map(), seen=new Set();
  for(const item of due){
   const key=[item.liabilityId||item.liabilityKey||item.sourceCommitmentId||item.id||item.name,item.dueDate,item.amount].join('|');
@@ -36,11 +40,10 @@ function calc(s,amount,sourceId,spendingId,at=new Date()){
   const record=byAccount.get(id)||{name:accounts.find(a=>Number(a.id)===id)?.name||source.name,amount:0,id};
   record.amount=round(record.amount+Number(item.amount||0));byAccount.set(id,record);
  }
- // Don't lose unallocated cash when a particular month lacks dated commitments:
- // keep at least the known fixed monthly baseline.
- const fixedFloor=FinanceEngine.fixedBreakdown(s.liabilities,s.commitments,at).total;
+ // Only actual unpaid dated obligations count. A generic calendar-month fixed
+ // baseline would re-introduce bills already paid inside the salary cycle.
  const datedTotal=round([...byAccount.values()].reduce((n,x)=>n+x.amount,0));
- const fixed=round(Math.max(datedTotal,fixedFloor));
+ const fixed=datedTotal;
  const budgets=s.budgets.filter(x=>!x.archived);
  const budget=round(budgets.reduce((n,x)=>n+Math.max(0,FinanceEngine.budgetTarget(x)-Number(x.spent||0)),0));
  const available=round(Math.max(0,amount));
@@ -62,7 +65,7 @@ function calc(s,amount,sourceId,spendingId,at=new Date()){
  }
  // Remaining surplus is a cautious unassigned reserve, not automatically spent.
  return{source,spending,available,bills,life,fixed,budget,datedTotal,due:[...byAccount.values()],goals:allocations,reserve:remaining,
-  shortfall:round(Math.max(0,fixed+budget-available)),start,end,unassignedBills:round(Math.max(0,fixed-datedTotal))};
+  shortfall:round(Math.max(0,fixed+budget-available)),start,end};
 }
 function renderInstructions(plan){
  const host=$('salaryGuideResults');if(!host)return;
@@ -72,7 +75,8 @@ function renderInstructions(plan){
  const transfer=plan.spending&&plan.spending.id!==plan.source.id&&plan.life>0
   ?'<li><span>Sposta su '+esc(plan.spending.name)+' per le spese quotidiane</span><strong>'+money(plan.life)+'</strong></li>'
   :'<li><span>Tieni per le spese quotidiane su '+esc(plan.spending?.name||plan.source.name)+'</span><strong>'+money(plan.life)+'</strong></li>';
- host.innerHTML='<div class="salary-guide-status" role="status">Ripartizione indicativa dell’ultimo stipendio di '+money(plan.available)+'.</div>'+
+ host.innerHTML='<div class="salary-guide-status" role="status">Ripartizione indicativa dello stipendio di '+money(plan.available)+'.</div>'+
+  '<p class="salary-guide-note">Periodo verificato: '+esc(plan.start)+' → '+esc(plan.end)+' (escluso il giorno finale). Sono conteggiate solo le uscite non segnate come pagate.</p>'+
   '<ul class="salary-guide-steps">'+
   '<li><span>Riserva per rate e spese fisse fino al prossimo stipendio</span><strong>'+money(plan.bills)+'</strong></li>'+
   transfer+allocations+
@@ -80,8 +84,8 @@ function renderInstructions(plan){
   '</ul>'+
   (targets?'<details><summary>Conti con addebiti programmati</summary><ul class="salary-guide-steps">'+targets+'</ul><p>Controlla i saldi effettivi prima di trasferire: gli importi indicati sono addebiti previsti, non trasferimenti aggiuntivi.</p></details>':'')+
   (plan.shortfall>0?'<p class="salary-guide-alert">Attenzione: mancano '+money(plan.shortfall)+' per coprire budget e uscite previste. Riduci il budget o rivedi il piano prima di accantonare.</p>':'')+
-  (plan.unassignedBills>0?'<p class="salary-guide-note">Sono inclusi '+money(plan.unassignedBills)+' di spese fisse mensili non attribuite a scadenze datate nel periodo.</p>':'')+
-  '<p class="salary-guide-note">Sono suggerimenti, non bonifici eseguiti. Gli accantonamenti agli obiettivi non sono registrati automaticamente. Le spese variabili o non censite potrebbero ridurre il margine.</p>';
+  '<p class="salary-guide-note">Le spese ricorrenti senza una scadenza registrata non sono quantificabili con certezza: controlla che tutte le bollette e gli abbonamenti abbiano una data.</p>'+
+  '<p class="salary-guide-note">Sono suggerimenti, non bonifici eseguiti. Gli accantonamenti agli obiettivi non sono registrati automaticamente. Le spese pagate fuori dall’app potrebbero essere ancora conteggiate finché non le segni come pagate.</p>';
  host.hidden=false;
 }
 async function render(){
