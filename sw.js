@@ -1,4 +1,4 @@
-const CACHE='finanze-stable-v15-plan-import-feedback';
+const CACHE='finanze-stable-v19-dates-and-layout';
 const V='20261109f';
 const CORE=['./','./index.html',`./manifest.webmanifest?v=${V}`,`./app.css?v=${V}`,`./db.js?v=${V}`,`./engine.js?v=${V}`,`./spendable-guard.js?v=${V}`,`./app.js?v=${V}`,`./appearance.js?v=${V}`,`./insights.js?v=${V}`,`./projection-details.js?v=${V}`,`./recurrence-controls.js?v=${V}`,`./ai-context.js?v=${V}`,`./ai-chat.js?v=${V}`,`./ai-chat.css?v=${V}`,`./goal-priority.js?v=${V}`,`./plan-patch.js?v=${V}`,`./plan-update-ui.js?v=${V}`,`./plan-update.css?v=${V}`,`./salary-guide.js?v=${V}`,`./salary-guide.css?v=${V}`,`./ui-polish.css?v=${V}`,'./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
