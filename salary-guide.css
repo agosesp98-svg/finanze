@@ -1,0 +1,23 @@
+.salary-guide{margin:18px 0 26px;padding:20px 17px 18px;border:1px solid var(--separator);border-radius:24px;background:var(--glass);box-shadow:var(--shadow)}
+.salary-guide-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px}
+.salary-guide-head small{display:block;font-size:10px;font-weight:800;letter-spacing:.13em;color:var(--secondary)}
+.salary-guide-head h2{margin:5px 0 0;font-size:21px;line-height:1.18;letter-spacing:-.035em}
+.salary-guide-tag{font-size:10px;font-weight:750;white-space:nowrap;color:var(--blue);background:var(--blue-soft);padding:7px 9px;border-radius:999px}
+.salary-guide-intro{color:var(--secondary);font-size:13px;line-height:1.55;margin:10px 0 16px}
+.salary-guide-form{display:grid;gap:11px}
+.salary-guide-form label{display:grid;gap:5px;color:var(--secondary);font-size:12px;font-weight:650}
+.salary-guide-form input,.salary-guide-form select{width:100%;min-width:0;min-height:44px;border:1px solid var(--separator);border-radius:12px;background:var(--surface-solid);padding:10px 12px;color:var(--text);font-size:15px}
+.salary-guide-form button{margin-top:4px;min-height:46px;width:100%;border-radius:12px}
+.salary-guide-form button:disabled{opacity:.5}
+.salary-guide-feedback{font-size:13px;line-height:1.45;margin:10px 0 0}
+.salary-guide-feedback:empty{display:none}
+.salary-guide-status{font-size:13px;font-weight:700;margin:17px 0 10px}
+.salary-guide-steps{list-style:none;padding:0;margin:0;border-top:1px solid var(--separator)}
+.salary-guide-steps li{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:13px 0;border-bottom:1px solid var(--separator);font-size:13px;line-height:1.4}
+.salary-guide-steps li span{flex:1;min-width:0}
+.salary-guide-steps li strong{white-space:nowrap;font-size:15px;font-variant-numeric:tabular-nums}
+.salary-guide details{margin:12px 0}
+.salary-guide summary{cursor:pointer;font-size:13px;font-weight:650}
+.salary-guide details p,.salary-guide-note{font-size:12px;line-height:1.5;color:var(--secondary);margin:10px 0 0}
+.salary-guide-alert{background:var(--orange-soft);color:var(--orange);border-radius:12px;padding:11px 12px;font-size:12px;line-height:1.5;margin:12px 0}
+@media(max-width:380px){.salary-guide{padding:17px 13px}.salary-guide-head h2{font-size:19px}.salary-guide-tag{font-size:9px}}
