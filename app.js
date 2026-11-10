@@ -210,6 +210,7 @@ const FinanceApp=(()=>{
   function bind(){document.addEventListener('click',e=>{
     const jump=e.target.closest('[data-jump-loans]');
     if(jump){
+      closeSheet();
       switchView('plan');
       const title=$('#loanManagementTitle');
       if(title)requestAnimationFrame(()=>{
