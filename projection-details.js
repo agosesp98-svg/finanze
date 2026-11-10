@@ -55,6 +55,8 @@
       const end=new Date(b.cycleEnd+'T12:00:00');end.setDate(end.getDate()-1);
       const endDay=FinanceEngine.iso(end);
       const openLoans='<button class="secondary-button projection-loan-link" type="button" data-jump-loans>Controlla le rate e le scadenze</button>';
+      const staleLoanAlerts=(s.liabilities||[]).filter(l=>!l.archived&&!l.completed&&
+        Number(l.monthly||0)>0&&l.nextDueDate&&l.nextDueDate<b.cycleStart);
       const pendingLoanAlert=(s.liabilities||[]).filter(l=>!l.archived&&
         (l.completed||l.monthlyPhaseComplete||!Number(l.monthly||0))&&
         (l.nextDueDate||l.finalPaymentDate||l.finalDueDate||'')>=b.cycleStart&&
@@ -75,6 +77,9 @@
         (pendingLoanAlert.length?'<p class="projection-loan-warning">Verifica questi finanziamenti: '+
           pendingLoanAlert.map(l=>esc(l.name)).join(', ')+
           '. Potrebbero essere contrassegnati come conclusi o con rata disattivata.</p>':'')+
+        (staleLoanAlerts.length?'<p class="projection-loan-warning">Le prossime rate memorizzate per '+
+          staleLoanAlerts.map(l=>esc(l.name)).join(', ')+
+          ' risalgono a un ciclo precedente. Controlla le date e i pagamenti: le rate future mostrate possono essere previsioni.</p>':'')+
         '<div class="sheet-section"><h3>Riepilogo del ciclo</h3><div class="allocation-list">'+
           '<div class="allocation-row"><span>Stipendio previsto</span><strong>'+money(b.salaryNet)+'</strong></div>'+
           '<div class="allocation-row"><span>Budget di vivibilità</span><strong>− '+money(b.budgetTotal)+'</strong></div>'+
