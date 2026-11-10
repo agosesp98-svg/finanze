@@ -24,6 +24,19 @@
       .projection-detail-note{font-size:12px;line-height:1.55;color:var(--secondary);padding:1px 3px 12px}
       .projection-loan-warning{background:var(--orange-soft);color:var(--orange);font-size:12px;line-height:1.5;border-radius:14px;padding:12px}
       .projection-loan-link{width:100%;margin-bottom:10px}
+      .loan-audit p{margin:0 0 11px;font-size:12px;line-height:1.55;color:var(--secondary)}
+      .loan-audit-list{border-top:1px solid var(--separator)}
+      .loan-audit-row{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--separator);padding:12px 0;min-width:0}
+      .loan-audit-copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+      .loan-audit-copy strong{font-size:14px;overflow-wrap:anywhere}
+      .loan-audit-copy span{font-size:12px;color:var(--secondary);overflow-wrap:anywhere;line-height:1.35}
+      .loan-audit-copy small{font-size:11px;color:var(--tertiary);overflow-wrap:anywhere;line-height:1.35}
+      .loan-audit-check .loan-audit-state{font-weight:690;color:var(--orange)}
+      .loan-audit-edit{flex:0 0 auto;min-height:36px;padding:6px 10px;font-size:12px;border-radius:10px}
+      .loan-audit-archived{padding-top:12px;font-size:12px}
+      .loan-audit-archived summary{cursor:pointer;padding:6px 0;color:var(--secondary);font-weight:700}
+      .loan-audit-archived .loan-audit-list{margin-top:8px}
+    
     
     `;document.head.appendChild(style);
   }
@@ -49,9 +62,35 @@
   function totalBox(name,amount,items){
     return '<div class="sheet-section"><h3>'+esc(name)+' · '+money(amount)+'</h3>'+rows(items)+'</div>';
   }
+  function auditLoans(list){
+    if(!list.length)return '';
+    const current=list.filter(x=>!x.archived);
+    const archived=list.filter(x=>x.archived);
+    function cards(loans){
+      return loans.map(l=>{
+        const dates=[l.nextDueDate?'Prossima: '+dateLabel(l.nextDueDate):'Prossima: non impostata',
+          l.finalDueDate?'Fine rate: '+dateLabel(l.finalDueDate):''];
+        const due=l.due.map(d=>dateLabel(d.date)+' · '+money(d.amount)).join(', ');
+        return '<div class="loan-audit-row'+(l.suspected?' loan-audit-check':'')+'">'+
+          '<div class="loan-audit-copy"><strong>'+esc(l.name)+'</strong>'+
+          '<span class="loan-audit-state">'+esc(l.reason)+'</span>'+
+          '<small>'+esc(dates.filter(Boolean).join(' · '))+'</small>'+
+          (due?'<small>Conteggiate: '+esc(due)+'</small>':'')+
+          '</div><button class="secondary-button loan-audit-edit" type="button" data-liability="'+esc(l.id)+'" aria-label="Modifica '+esc(l.name)+'">Modifica</button></div>';
+      }).join('');
+    }
+    return '<div class="sheet-section loan-audit">'+
+      '<h3>Verifica tutti i finanziamenti</h3>'+
+      '<p>Qui trovi anche le rate escluse. Se manca una rata, controlla lo stato e la prossima scadenza del finanziamento; non verrà aggiunta automaticamente.</p>'+
+      (current.length?'<div class="loan-audit-list">'+cards(current)+'</div>':'<p>Nessun finanziamento attivo registrato.</p>')+
+      (archived.length?'<details class="loan-audit-archived"><summary>Finanziamenti archiviati ('+archived.length+')</summary><div class="loan-audit-list">'+cards(archived)+'</div></details>':'')+
+      '</div>';
+  }
+
   async function openMonth(key){
     try{
       const s=await snapshot(),b=FinanceEngine.monthBreakdown(s,key),title=monthLabel(key);
+      const loans=FinanceEngine.loanCycleAudit(s,key);
       const end=new Date(b.cycleEnd+'T12:00:00');end.setDate(end.getDate()-1);
       const endDay=FinanceEngine.iso(end);
       const openLoans='<button class="secondary-button projection-loan-link" type="button" data-jump-loans>Controlla le rate e le scadenze</button>';
@@ -91,7 +130,7 @@
           '<div class="allocation-row fixed"><span>Margine per gli obiettivi</span><strong>'+money(b.capacity)+'</strong></div>'+
         '</div></div>'+
         '<p class="projection-detail-note">Sono considerate le rate con scadenza nel ciclo stipendio; quelle già segnate come pagate sono escluse. Le scadenze previste sono indicate come tali. Il giorno successivo alla fine del ciclo rientra nel successivo.</p>'+
-        openLoans;
+        auditLoans(loans)+openLoans;
       $('#sheetBackdrop').classList.add('open');
       $('#sheet').classList.add('open');
       $('#sheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
