@@ -185,9 +185,30 @@ const FinanceApp=(()=>{
     openSheet('Scadenza prevista',`<div class="sheet-section"><h3>${esc(l.name)}</h3><div class="kpi-grid"><div class="kpi"><small>Data</small><strong>${esc(date)}</strong></div><div class="kpi"><small>Importo</small><strong>${money(amount)}</strong></div></div><p class="helper">${isFinal?'Pagamento finale: è collegato al relativo obiettivo di risparmio e non viene sommato una seconda volta nel margine mensile. La data precisa può essere da confermare.':'È una previsione della rata prevista dal contratto, non un pagamento già registrato.'}</p><button class="secondary-button" data-liability="${l.id}" type="button">Gestisci finanziamento</button></div>`);
   }
   function renderPlan(){
-    const m=model();$('#planSummary').innerHTML=`<div class="plan-equation"><span>Stipendio netto</span><strong>${m.salaryNet?money(m.salaryNet):'Da impostare'}</strong><span>Budget</span><strong>− ${money(m.monthlyBudget)}</strong><span>Rate + spese fisse</span><strong>− ${money(m.fixed)}</strong><b class="result">Per ${esc(m.goal?.name||'gli obiettivi')}</b><strong class="result-value">${m.salaryNet?money(m.goalCapacity):'—'}</strong></div><p class="plan-caption">È lo stesso calcolo usato nella Home e negli Obiettivi.</p>`;
+    const now=new Date(),cycleKey=FinanceEngine.cycleStart(state.settings,now).slice(0,7);
+    const b=FinanceEngine.monthBreakdown(state,cycleKey,now);
+    const lastDate=parse(b.cycleEnd);lastDate.setDate(lastDate.getDate()-1);
+    const cycleLabel=dueLabel(b.cycleStart)+' – '+dueLabel(FinanceEngine.iso(lastDate));
+    $('#planSummary').innerHTML=
+      '<div class="clean-plan-cycle"><small>CICLO IN CORSO</small><strong>'+esc(cycleLabel)+'</strong></div>'+
+      '<div class="clean-plan-kpis">'+
+        '<div><small>Da coprire</small><strong>'+money(b.plannedOutflow)+'</strong></div>'+
+        '<div><small>Margine stimato</small><strong>'+(b.salaryNet?money(b.capacity):'—')+'</strong></div>'+
+      '</div>'+
+      '<div class="clean-plan-breakdown"><span>Budget '+money(b.budgetTotal)+'</span>'+
+        '<span>Rate e uscite '+money(b.fixedTotal)+'</span></div>'+
+      (!b.salaryNet?'<p class="clean-plan-hint">Imposta lo stipendio nelle Impostazioni per stimare il margine.</p>':
+        '<p class="clean-plan-hint">Previsione basata sulle scadenze non pagate del ciclo; non rappresenta il saldo del conto.</p>');
+
     $('#budgetList').innerHTML=state.budgets.some(b=>!b.archived&&FinanceEngine.budgetTarget(b)>0)?state.budgets.filter(b=>!b.archived&&FinanceEngine.budgetTarget(b)>0).map(b=>{const target=FinanceEngine.budgetTarget(b),ceiling=FinanceEngine.budgetCeiling(b),spent=Number(b.spent||0),pct=target?spent/target*100:0,cls=spent>ceiling?'danger':spent>target?'over':'';return `<button class="budget-row ${cls}" data-budget="${b.id}" type="button"><div class="budget-top"><b>${esc(b.name)}</b><strong>${money(Math.max(0,target-spent))}</strong></div><div class="budget-sub"><span>Speso ${money(spent)} su ${money(target)}</span><span>${Math.round(pct)}%</span></div><div class="progress blue"><i style="width:${clamp(pct,0,100)}%"></i></div></button>`}).join(''):'<div class="empty">Nessun budget.</div>';
-    const scheduled=FinanceEngine.scheduledCommitments(state.commitments,new Date(),6,state.liabilities);$('#scheduledList').innerHTML=scheduled.length?scheduled.map(commitmentRow).join(''):'<div class="empty">Nessuna uscita programmata.</div>';
+    const scheduled=FinanceEngine.scheduledCommitments(state.commitments,now,6,state.liabilities)
+      .filter(x=>!x.liabilityId&&!x.liabilityKey);
+    const count=scheduled.length,visible=scheduledExpanded?scheduled:scheduled.slice(0,5);
+    $('#scheduledList').innerHTML=visible.length?visible.map(commitmentRow).join('')
+      :'<div class="empty">Nessuna uscita programmata.</div>';
+    const expand=$('#scheduledExpand');
+    expand.hidden=count<=5;
+    expand.textContent=scheduledExpanded?'Mostra meno':'Mostra tutte le '+count+' scadenze';
     const liabilities=state.liabilities.filter(l=>!l.completed&&!l.archived);
     const loanSummary=liabilities.length===1?'1 finanziamento attivo':liabilities.length+' finanziamenti attivi';
     const homeLoanSummary=$('#homeLoanSummary'),loanCount=$('#loanCount');
