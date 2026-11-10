@@ -65,13 +65,17 @@ const FinanceEngine=(()=>{
     const today=iso(now),span=clamp(Math.floor(Number(months)||6),1,24);
     const horizon=iso(new Date(now.getFullYear(),now.getMonth()+span,1,12));
     const actual=commitments.filter(c=>!c.archived&&c.active!==false&&!c.paidDate&&c.dueDate);
-    const seen=new Set(commitments.filter(c=>!c.archived&&c.dueDate).map(c=>`${norm(c.name)}|${c.dueDate}`));
+    const identity=c=>c.liabilityId!=null?'loan:'+String(c.liabilityId):
+      c.sourceLiabilityId!=null?'loan:'+String(c.sourceLiabilityId):
+      c.liabilityKey?'loan-key:'+String(c.liabilityKey):'rec:'+norm(c.name);
+    const seen=new Set(commitments.filter(c=>!c.archived&&c.dueDate)
+      .map(c=>identity(c)+'|'+c.dueDate));
     const forecasts=[];
     for(const latest of recurringCommitments(commitments)){
       if(!latest.dueDate)continue;
       let next=nextDateByCadence(latest.dueDate,latest.cadence);
       for(let steps=0;next&&next<horizon&&steps<400;steps++){
-        const key=`${norm(latest.name)}|${next}`;
+        const key=identity(latest)+'|'+next;
         if(latest.recurrenceEnd&&next>latest.recurrenceEnd)break;
         if(next>=today&&!seen.has(key)){
           forecasts.push({
@@ -94,7 +98,7 @@ const FinanceEngine=(()=>{
       const end=l.recurrenceEnd||l.finalDueDate||'';
       for(let step=0;Number(l.monthly||0)>0&&!l.monthlyPhaseComplete&&due&&due<horizon&&step<240;step++){
         if(end&&due>end)break;
-        const amount=liabilityAmountForMonth(l,monthKey(due)),key=`${norm(l.name)}|${due}`;
+        const amount=liabilityAmountForMonth(l,monthKey(due)),key='loan:'+String(l.id)+'|'+due;
         if(due>=today&&amount>0&&!seen.has(key)){
           forecasts.push({name:l.name,amount,dueDate:due,active:true,projected:true,estimated:false,cadence:'Mensile',
             accountId:l.accountId,liabilityId:l.id,liabilityKey:l.scheduleKey||'',sourceLiabilityId:l.id});
@@ -105,8 +109,11 @@ const FinanceEngine=(()=>{
         due=next;
       }
       if(Number(l.finalPayment||0)>0&&l.finalPaymentDate&&l.finalPaymentDate>=today&&l.finalPaymentDate<horizon){
-        const key=`${norm(l.name)}|${l.finalPaymentDate}`;
-        if(!seen.has(key)){
+        const key='loan-final:'+String(l.id)+'|'+l.finalPaymentDate;
+        const recordedFinal=commitments.some(c=>!c.archived&&c.dueDate===l.finalPaymentDate&&
+          (Number(c.liabilityId)===Number(l.id)||(l.scheduleKey&&c.liabilityKey===l.scheduleKey))&&
+          Math.abs(Number(c.amount||0)-Number(l.finalPayment||0))<0.005);
+        if(!recordedFinal&&!seen.has(key)){
           forecasts.push({name:l.name+' · pagamento finale',amount:Number(l.finalPayment),dueDate:l.finalPaymentDate,
             cadence:'Una tantum',active:true,projected:true,estimated:!!l.finalPaymentDateEstimated,
             accountId:l.accountId,liabilityId:l.id,sourceLiabilityId:l.id,balloon:true,fundedByGoal:!!l.fundedByGoal});
