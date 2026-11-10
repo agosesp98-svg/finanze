@@ -43,27 +43,65 @@ const FinanceApp=(()=>{
   function render(){renderToday();renderMovements();renderPlan();renderGoals()}
 
   function renderToday(){
-    const m=model(),banner=$('#todayStatus');banner.className='status-banner';
-    if(m.blockingShortfall>0){banner.classList.add('show','danger');banner.innerHTML=`<span class="status-dot"></span><span><b>Mancano ${money(m.blockingShortfall)}</b> per coprire le uscite previste. Nuove spese discrezionali: €0.</span>`}
-    else if(m.spendable===0&&m.due>0){banner.classList.add('show','warning');banner.innerHTML='<span class="status-dot"></span><span>Le prossime uscite assorbono il margine disponibile.</span>'}
-    $('#spendCard').classList.toggle('danger',m.blockingShortfall>0);$('#spendLabel').textContent=`Puoi spendere fino al ${parse(m.salary).getDate()}`;$('#spendValue').textContent=money(m.spendable);$('#spendDaily').textContent=`${money(m.daily)} / giorno`;$('#spendDays').textContent=`${m.days} ${m.days===1?'giorno':'giorni'} rimasti`;
-    renderMonthCard(m);
-    const ordered=[...state.accounts.filter(a=>!a.archived&&!a.protected),...state.accounts.filter(a=>!a.archived&&a.protected)];$('#accountsStrip').innerHTML=ordered.length?ordered.map(a=>`<button class="account-card ${a.protected?'protected':''}" data-account="${a.id}" type="button"><div class="account-card-top">${accountIcon(a)}${a.protected?'<span class="lock-badge">🔒</span>':''}</div><small>${esc(a.name)}</small><strong>${money(a.balance)}</strong></button>`).join(''):'<div class="empty">Aggiungi un conto dalle impostazioni.</div>';
-    const upcoming=FinanceEngine.scheduledCommitments(state.commitments,new Date(),6,state.liabilities).slice(0,4);$('#upcomingList').innerHTML=upcoming.length?upcoming.map(x=>commitmentRow(x)).join(''):'<div class="empty">Nessuna uscita programmata.</div>';
-    const goal=m.goal,box=$('#primaryGoal');if(!goal){box.innerHTML='<div class="empty">Nessun obiettivo attivo.</div>';return}const s=FinanceEngine.goalStats(goal);box.innerHTML=`<button class="goal-hero" data-goal="${goal.id}" type="button"><small>Obiettivo prioritario</small><strong>${esc(goal.name)}</strong><p>${money(s.current)} di ${money(s.target)}</p><div class="progress"><i style="width:${s.pct}%"></i></div><div class="goal-foot"><span>${Math.round(s.pct)}% completato</span><span>${s.monthly?`${money0(s.monthly)}/mese richiesti`:money(s.remaining)+' mancanti'}</span></div></button>`;
-  }
+    const now=new Date(),m=model(),banner=$('#todayStatus');
+    banner.className='status-banner';
+    banner.replaceChildren();
+    if(m.blockingShortfall>0){
+      banner.classList.add('show','danger');
+      banner.innerHTML='<span class="status-dot"></span><span><b>Mancano '+money(m.blockingShortfall)+'</b> per coprire le prossime uscite.</span>';
+    }else if(m.spendable===0&&m.due>0){
+      banner.classList.add('show','warning');
+      banner.innerHTML='<span class="status-dot"></span><span>Le prossime uscite assorbono il margine disponibile.</span>';
+    }
+    $('#spendCard').classList.toggle('danger',m.blockingShortfall>0);
+    $('#spendLabel').textContent='Puoi spendere fino al '+parse(m.salary).getDate();
+    $('#spendValue').textContent=money(m.spendable);
+    $('#spendDaily').textContent=money(m.daily)+' / giorno';
+    $('#spendDays').textContent=m.days+' '+(m.days===1?'giorno':'giorni')+' rimasti';
 
-  function renderMonthCard(m){
-    const card=$('#monthlyPlan');if(!card)return;let status='';
-    if(!m.salaryNet)status='<div class="month-note warning">Imposta lo stipendio per calcolare il piano mensile.</div>';
-    else if(m.salaryNet<m.monthlyBudget+m.fixed)status=`<div class="month-note danger">Il mese tipo supera lo stipendio di <b>${money(m.monthlyBudget+m.fixed-m.salaryNet)}</b>.</div>`;
-    else if(m.goalNeed&&m.goalGap>0)status=`<div class="month-note warning">Per restare in linea con ${esc(m.goal.name)} servirebbero circa <b>${money0(m.goalNeed)}/mese</b>. Mancano ${money0(m.goalGap)}.</div>`;
-    else if(m.goalNeed)status=`<div class="month-note success">Il piano copre la quota indicativa richiesta di ${money0(m.goalNeed)}/mese.</div>`;
-    const budgets=state.budgets.filter(b=>FinanceEngine.budgetTarget(b)>0).map(b=>`<div class="allocation-row"><span>${esc(b.name)}</span><strong>${money0(FinanceEngine.budgetTarget(b))}</strong></div>`).join('');
-    const unpaidRates=FinanceEngine.scheduledCommitments(state.commitments,new Date(),3,state.liabilities)
-      .filter(x=>(x.liabilityId||x.liabilityKey)&&x.active!==false&&!x.paidDate).slice(0,3);
-    const rateRows=unpaidRates.map(x=>`<div class="month-rate-row"><span><b>${esc(x.name)}</b><small>Scad. ${esc(dueLabel(x.dueDate))}</small></span><strong>${money(x.amount)}</strong></div>`).join('');
-    card.innerHTML=`<div class="month-head"><div><small>MESE TIPO</small><h2>Questo mese hai</h2></div><strong>${m.salaryNet?money0(m.salaryNet):'—'}</strong></div><div class="allocation-list">${budgets}<div class="allocation-row fixed"><span>Rate e spese fisse</span><strong>${money0(m.fixed)}</strong></div></div><div class="month-result"><span>${m.goal?`Per ${esc(m.goal.name)}`:'Per gli obiettivi'}</span><strong>${m.salaryNet?money0(m.goalCapacity):'—'}</strong></div>${status}${rateRows?`<div class="month-upcoming-rates"><small>RATE NON PAGATE · PROSSIME SCADENZE</small>${rateRows}</div>`:''}<button class="plan-link" type="button" data-view="plan">Vedi il piano <span>›</span></button>`;
+    // Use the same 10-to-10 salary-cycle data as the detailed Plan.
+    const currentCycle=FinanceEngine.cycleStart(state.settings,now).slice(0,7);
+    const breakdown=FinanceEngine.monthBreakdown(state,currentCycle,now);
+    const cycleLast=parse(breakdown.cycleEnd);
+    cycleLast.setDate(cycleLast.getDate()-1);
+    $('#upcomingCycle').textContent=dueLabel(breakdown.cycleStart)+' – '+dueLabel(FinanceEngine.iso(cycleLast));
+    const dues=[...breakdown.overdueItems,...breakdown.rateItems,
+      ...breakdown.recurringItems,...breakdown.oneOffItems]
+      .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    const dueRows=dues.slice(0,3).map(x=>{
+      const projected=!!x.projected;
+      const loan=!!(x.liabilityId||x.liabilityKey);
+      const action=loan
+        ?'data-liability="'+esc(x.liabilityId)+'"'
+        :projected&&x.sourceCommitmentId
+          ?'data-forecast-commitment="'+esc(x.sourceCommitmentId)+'" data-forecast-date="'+esc(x.date)+'"'
+          :'data-commitment="'+esc(x.id)+'"';
+      const late=String(x.date)<today();
+      return '<button class="list-row home-due-row" type="button" '+action+
+        ' aria-label="'+esc(x.name+', scadenza '+dueLabel(x.date)+', '+money(x.amount))+'">'+
+        '<span class="row-copy"><b>'+esc(x.name)+'</b><span>'+
+        (late?'Scaduta · ':'')+esc(dueLabel(x.date))+
+        (projected?' · Prevista':'')+'</span></span>'+
+        '<strong class="home-due-amount">'+money(x.amount)+'</strong>'+
+        '<span class="chevron" aria-hidden="true">›</span></button>';
+    });
+    $('#upcomingList').innerHTML=dueRows.length?dueRows.join('')
+      :'<div class="home-empty">Nessuna scadenza non pagata registrata nel ciclo.</div>';
+    const foot=$('#homeDueFoot');
+    foot.hidden=!dues.length;
+    foot.textContent=dues.length
+      ?dues.length+' '+(dues.length===1?'uscita':'uscite')+' · '+money(dues.reduce((s,x)=>s+Number(x.amount||0),0))+' da coprire'+
+        (dues.length>3?' · Mostrate le prime 3':'')
+      :'';
+
+    const ordered=[...state.accounts.filter(a=>!a.archived&&!a.protected),
+      ...state.accounts.filter(a=>!a.archived&&a.protected)];
+    $('#accountsStrip').innerHTML=ordered.length?ordered.map(a=>
+      '<button class="account-card '+(a.protected?'protected':'')+'" data-account="'+a.id+
+      '" type="button" aria-label="'+esc(a.name+', saldo '+money(a.balance)+(a.protected?', protetto':''))+'">'+
+      '<small>'+esc(a.name)+(a.protected?' · Protetto':'')+'</small>'+
+      '<strong>'+money(a.balance)+'</strong></button>').join('')
+      :'<div class="home-empty">Nessun conto aggiunto. Puoi crearne uno dalle Impostazioni.</div>';
   }
 
   function isUnclassified(m){return m.type==='expense'&&!m.budgetId&&(!m.category||norm(m.category)==='da classificare')}
@@ -288,6 +326,7 @@ const FinanceApp=(()=>{
       });
       return;
     }
+    if(e.target.closest('#homeManageAccounts')){openSettings();return}
     const nav=e.target.closest('[data-view]');if(nav){switchView(nav.dataset.view);return}if(e.target.closest('#quickAdd')){openQuickAdd();return}if(e.target.closest('#settingsBtn')){openSettings();return}if(e.target.closest('[data-close-sheet]')||e.target.id==='sheetBackdrop'){closeSheet();return}const qm=e.target.closest('[data-quick-mode]');if(qm){openQuickAdd(qm.dataset.quickMode);return}const acc=e.target.closest('[data-account]');if(acc){openAccount(acc.dataset.account);return}const mov=e.target.closest('[data-movement]');if(mov){openMovement(mov.dataset.movement);return}const bud=e.target.closest('[data-budget]');if(bud){openBudget(bud.dataset.budget);return}const loanForecast=e.target.closest('[data-forecast-liability]');if(loanForecast){openLoanForecast(loanForecast.dataset.forecastLiability,loanForecast.dataset.forecastDate);return}const forecast=e.target.closest('[data-forecast-commitment]');if(forecast){openForecast(forecast.dataset.forecastCommitment,forecast.dataset.forecastDate);return}const com=e.target.closest('[data-commitment]');if(com){openCommitment(com.dataset.commitment);return}const pay=e.target.closest('[data-pay-commitment]');if(pay){payCommitment(pay.dataset.payCommitment);return}const li=e.target.closest('[data-liability]');if(li){openLiability(li.dataset.liability);return}const goal=e.target.closest('[data-goal]');if(goal){openGoal(goal.dataset.goal);return}const contribute=e.target.closest('[data-contribute]');if(contribute){contributeGoal(contribute.dataset.contribute);return}const filter=e.target.closest('[data-filter]');if(filter){movementFilter=filter.dataset.filter;renderMovements();return}const remove=e.target.closest('[data-remove-category]');if(remove){const i=Number(remove.dataset.removeCategory);if(customCategories[i]!=null){customCategories.splice(i,1);saveCustomCategories().then(()=>{$('#categoryChips').innerHTML=categoryChips()})}return}if(e.target.closest('[data-new-budget]')){openBudget();return}if(e.target.closest('[data-new-commitment]')){openCommitment();return}if(e.target.closest('[data-new-goal]')){openGoal();return}if(e.target.closest('[data-new-account]')){newAccount();return}if(e.target.closest('[data-backup]')){exportBackup();return}if(e.target.closest('[data-import]')){$('#backupInput').click();return}if(e.target.closest('[data-reset]')){if(confirm('Vuoi davvero cancellare tutti i dati locali?')){document.dispatchEvent(new Event('finanze:data-reset'));FinanceDB.clearAll().then(()=>location.reload())}return}if(e.target.closest('#spendCard')){openSpendDetail();return}});$('#backupInput').addEventListener('change',e=>importBackup(e.target.files?.[0]));document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()})}
 
   async function init(){try{await load();await consumeRatePatch();await maintain();await load();render();bind();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').then(r=>r.update()).catch(()=>{})}catch(err){console.error(err);toast('Errore nel caricamento dei dati')}requestAnimationFrame(()=>setTimeout(()=>$('#boot').classList.add('hide'),120))}
