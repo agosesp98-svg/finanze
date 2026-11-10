@@ -62,11 +62,8 @@
       const s=await snapshot(),key=monthKey(FinanceEngine.iso(new Date())),b=breakdownForMonth(s,key);
       const card=$('#monthlyPlan');if(card)replaceFixedRows(card,b);
       const summary=$('#planSummary');if(summary)replacePlanSummary(summary,b);
-      const rows=$$('#projectionList .projection-row'),projection=FinanceEngine.projection(s,6);
-      rows.forEach((row,i)=>{
-        const p=projection[i];if(!p)return;const spans=$$('span',row);if(spans[0])spans[0].textContent=`Budget ${money0(p.monthlyBudget)} · Rate ${money0(p.rateTotal)} · Ricorrenti ${money0(p.recurringTotal)}`;
-      });
-      const heading=$$('#view-plan .section-title h2').find(h=>norm(h.textContent)==='come cambia il margine');if(heading)heading.textContent='Prossimi mesi';
+      // Projection cards now have an intentional concise layout.
+      // Do not overwrite their labels or amounts after rendering.
     }catch(err){console.error('Insights UI',err)}
   }
 
