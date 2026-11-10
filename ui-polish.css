@@ -120,3 +120,18 @@
 .loan-shortcut:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
 .loan-shortcut:active{background:var(--surface-3)}
 @media(prefers-reduced-motion:reduce){.loan-shortcut{transition:none}}
+
+/* Payday projections: always show the actual cycle interval, never only a month label. */
+.projection-row b{min-width:0;line-height:1.3}
+.projection-cycle{display:block;margin-top:4px;font-size:11px;font-weight:570;line-height:1.4;color:var(--secondary);letter-spacing:0;overflow-wrap:anywhere}
+.projection-row>.projection-dates{grid-column:1/-1;margin-top:6px;padding-top:8px;border-top:1px solid var(--separator)}
+.projection-row strong{min-width:0;overflow-wrap:anywhere}
+.projection-detail-item{min-width:0}
+.projection-detail-item span{min-width:0;overflow-wrap:anywhere}
+.projection-detail-date{color:var(--secondary);font-size:11px}
+@media(max-width:380px){
+ .projection-row{gap:6px 10px;padding:12px}
+ .projection-row b{font-size:15px}
+ .projection-cycle{font-size:10px}
+ .projection-row strong{font-size:16px}
+}
