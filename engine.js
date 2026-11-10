@@ -287,7 +287,7 @@ const FinanceEngine=(()=>{
   function projection(snapshot,months=6,now=new Date()){
     return monthSequence(now,months).map(({key,date})=>{
       const b=monthBreakdown(snapshot,key,now);
-      return{month:key,date,fixed:b.fixedTotal,rateTotal:b.rateTotal,recurringTotal:b.recurringTotal,monthlyBudget:b.budgetTotal,plannedOutflow:b.plannedOutflow,salaryNet:b.salaryNet,capacity:b.capacity,goalNeed:b.goalNeed,gap:b.gap,budgetItems:b.budgetItems,rateItems:b.rateItems,recurringItems:b.recurringItems};
+      return{month:key,date,cycleStart:b.cycleStart,cycleEnd:b.cycleEnd,fixed:b.fixedTotal,rateTotal:b.rateTotal,recurringTotal:b.recurringTotal,oneOffTotal:b.oneOffTotal,overdueTotal:b.overdueTotal,monthlyBudget:b.budgetTotal,plannedOutflow:b.plannedOutflow,salaryNet:b.salaryNet,capacity:b.capacity,goalNeed:b.goalNeed,gap:b.gap,budgetItems:b.budgetItems,rateItems:b.rateItems,recurringItems:b.recurringItems,oneOffItems:b.oneOffItems,overdueItems:b.overdueItems};
     });
   }
 
