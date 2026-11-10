@@ -190,8 +190,10 @@ const FinanceEngine=(()=>{
     const {budgets=[],liabilities=[],commitments=[],settings=[],goals=[]}=snapshot;
     const date=parse(key+'-01')||now;
     const {start,end,day}=salaryCycleBounds(key,settings);
+    const currentKey=monthKey(cycleStart(settings,now));
     const budgetItems=budgets.filter(b=>!b.archived&&budgetTarget(b)>0)
-      .map(b=>({kind:'budget',id:b.id,name:b.name,amount:budgetTarget(b)}));
+      .map(b=>({kind:'budget',id:b.id,name:b.name,
+        amount:key===currentKey?Math.max(0,budgetTarget(b)-Number(b.spent||0)):budgetTarget(b)}));
     const budgetTotal=budgetItems.reduce((s,x)=>s+x.amount,0);
     const scheduled=scheduledCommitments(commitments,parse(start),3,liabilities);
     const pending=scheduled.filter(x=>!x.archived&&x.active!==false&&!x.paidDate
