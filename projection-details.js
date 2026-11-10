@@ -16,6 +16,15 @@
       .projection-detail-total{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
       .projection-detail-total .kpi{min-width:0}
       .projection-detail-total .kpi strong{font-size:22px}
+      .projection-cycle-caption{font-size:13px;line-height:1.5;color:var(--secondary);margin:4px 0 14px}
+      .projection-detail-item{align-items:center;gap:10px}
+      .projection-detail-item span{display:block;min-width:0;flex:1;overflow-wrap:anywhere}
+      .projection-detail-item strong{flex:none;text-align:right;white-space:nowrap}
+      .projection-detail-date{display:block;margin-top:4px;font-size:11px;line-height:1.35;color:var(--secondary);font-weight:500}
+      .projection-detail-note{font-size:12px;line-height:1.55;color:var(--secondary);padding:1px 3px 12px}
+      .projection-loan-warning{background:var(--orange-soft);color:var(--orange);font-size:12px;line-height:1.5;border-radius:14px;padding:12px}
+      .projection-loan-link{width:100%;margin-bottom:10px}
+    
     `;document.head.appendChild(style);
   }
 
@@ -24,30 +33,64 @@
     return Object.fromEntries(STORES.map((s,i)=>[s,values[i]||[]]));
   }
 
+  const dateLabel=value=>{
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(String(value||'')))return 'Data da verificare';
+    return new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short',year:'numeric'}).format(new Date(value+'T12:00:00'));
+  };
   function rows(items){
-    return items.length?`<div class="allocation-list">${items.map(x=>`<div class="allocation-row"><span>${esc(x.name)}</span><strong>${money(x.amount)}</strong></div>`).join('')}</div>`:'<div class="empty">Nessuna voce in questo mese.</div>';
+    return items.length?'<div class="allocation-list">'+items.map(x=>
+      '<div class="allocation-row projection-detail-item"><span>'+esc(x.name)+
+      (x.date?'<small class="projection-detail-date">'+esc(dateLabel(x.date))+
+      (x.projected?' · prevista':'')+(x.estimated?' · stimata':'')+'</small>':'')+
+      (x.fundedByGoal?'<small class="projection-detail-date">Coperta da obiettivo, non sottratta due volte</small>':'')+
+      '</span><strong>'+money(x.amount)+'</strong></div>').join('')+'</div>'
+      :'<div class="empty">Nessuna voce in questo ciclo.</div>';
   }
-
+  function totalBox(name,amount,items){
+    return '<div class="sheet-section"><h3>'+esc(name)+' · '+money(amount)+'</h3>'+rows(items)+'</div>';
+  }
   async function openMonth(key){
-    const s=await snapshot(),b=FinanceEngine.monthBreakdown(s,key),title=monthLabel(key);
-    $('#sheetTitle').textContent=title.charAt(0).toUpperCase()+title.slice(1);
-    $('#sheetBody').innerHTML=`
-      <div class="projection-detail-total">
-        <div class="kpi"><small>Stipendio</small><strong>${money(b.salaryNet)}</strong></div>
-        <div class="kpi"><small>Margine obiettivi</small><strong>${money(b.capacity)}</strong></div>
-      </div>
-      <div class="sheet-section"><h3>Budget mensili · ${money(b.budgetTotal)}</h3>${rows(b.budgetItems)}</div>
-      <div class="sheet-section"><h3>Rate · ${money(b.rateTotal)}</h3>${rows(b.rateItems)}</div>
-      <div class="sheet-section"><h3>Abbonamenti e ricorrenti · ${money(b.recurringTotal)}</h3>${rows(b.recurringItems)}</div>
-      <div class="sheet-section"><h3>Riepilogo del mese</h3><div class="allocation-list">
-        <div class="allocation-row"><span>Stipendio</span><strong>${money(b.salaryNet)}</strong></div>
-        <div class="allocation-row"><span>Budget mensili</span><strong>− ${money(b.budgetTotal)}</strong></div>
-        <div class="allocation-row"><span>Rate</span><strong>− ${money(b.rateTotal)}</strong></div>
-        <div class="allocation-row"><span>Abbonamenti e ricorrenti</span><strong>− ${money(b.recurringTotal)}</strong></div>
-        <div class="allocation-row fixed"><span>Totale pianificato</span><strong>${money(b.plannedOutflow)}</strong></div>
-        <div class="allocation-row fixed"><span>Margine per obiettivi</span><strong>${money(b.capacity)}</strong></div>
-      </div></div>`;
-    $('#sheetBackdrop').classList.add('open');$('#sheet').classList.add('open');$('#sheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+    try{
+      const s=await snapshot(),b=FinanceEngine.monthBreakdown(s,key),title=monthLabel(key);
+      const end=new Date(b.cycleEnd+'T12:00:00');end.setDate(end.getDate()-1);
+      const endDay=FinanceEngine.iso(end);
+      const openLoans='<button class="secondary-button projection-loan-link" type="button" data-jump-loans>Controlla le rate e le scadenze</button>';
+      const pendingLoanAlert=(s.liabilities||[]).filter(l=>!l.archived&&
+        (l.completed||l.monthlyPhaseComplete||!Number(l.monthly||0))&&
+        (l.nextDueDate||l.finalPaymentDate||l.finalDueDate||'')>=b.cycleStart&&
+        (l.nextDueDate||l.finalPaymentDate||l.finalDueDate||'')<b.cycleEnd);
+      $('#sheetTitle').textContent=title.charAt(0).toUpperCase()+title.slice(1);
+      $('#sheetBody').innerHTML=
+        '<p class="projection-cycle-caption">Ciclo stipendio: <b>'+esc(dateLabel(b.cycleStart))+
+        ' – '+esc(dateLabel(endDay))+'</b></p>'+
+        '<div class="projection-detail-total">'+
+          '<div class="kpi"><small>Stipendio</small><strong>'+money(b.salaryNet)+'</strong></div>'+
+          '<div class="kpi"><small>Margine obiettivi</small><strong>'+money(b.capacity)+'</strong></div>'+
+        '</div>'+
+        totalBox('Budget per vivere',b.budgetTotal,b.budgetItems)+
+        totalBox('Rate e finanziamenti',b.rateTotal,b.rateItems)+
+        totalBox('Abbonamenti e ricorrenti',b.recurringTotal,b.recurringItems)+
+        (b.oneOffItems.length?totalBox('Spese una tantum',b.oneOffTotal,b.oneOffItems):'')+
+        (b.overdueItems.length?totalBox('Arretrati ancora da pagare',b.overdueTotal,b.overdueItems):'')+
+        (pendingLoanAlert.length?'<p class="projection-loan-warning">Verifica questi finanziamenti: '+
+          pendingLoanAlert.map(l=>esc(l.name)).join(', ')+
+          '. Potrebbero essere contrassegnati come conclusi o con rata disattivata.</p>':'')+
+        '<div class="sheet-section"><h3>Riepilogo del ciclo</h3><div class="allocation-list">'+
+          '<div class="allocation-row"><span>Stipendio previsto</span><strong>'+money(b.salaryNet)+'</strong></div>'+
+          '<div class="allocation-row"><span>Budget di vivibilità</span><strong>− '+money(b.budgetTotal)+'</strong></div>'+
+          '<div class="allocation-row"><span>Rate</span><strong>− '+money(b.rateTotal)+'</strong></div>'+
+          '<div class="allocation-row"><span>Abbonamenti</span><strong>− '+money(b.recurringTotal)+'</strong></div>'+
+          '<div class="allocation-row"><span>Una tantum</span><strong>− '+money(b.oneOffTotal)+'</strong></div>'+
+          (b.overdueTotal?'<div class="allocation-row"><span>Arretrati</span><strong>− '+money(b.overdueTotal)+'</strong></div>':'')+
+          '<div class="allocation-row fixed"><span>Totale da coprire</span><strong>'+money(b.plannedOutflow)+'</strong></div>'+
+          '<div class="allocation-row fixed"><span>Margine per gli obiettivi</span><strong>'+money(b.capacity)+'</strong></div>'+
+        '</div></div>'+
+        '<p class="projection-detail-note">Sono considerate le rate con scadenza nel ciclo stipendio; quelle già segnate come pagate sono escluse. Le scadenze previste sono indicate come tali. Il giorno successivo alla fine del ciclo rientra nel successivo.</p>'+
+        openLoans;
+      $('#sheetBackdrop').classList.add('open');
+      $('#sheet').classList.add('open');
+      $('#sheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
+    }catch(err){console.error('Projection month detail',err);const toast=$('#toast');if(toast){toast.textContent='Impossibile aprire il dettaglio: '+(err.message||'errore');toast.classList.add('show')}}
   }
 
   async function enhance(){
