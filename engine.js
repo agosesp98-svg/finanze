@@ -70,7 +70,7 @@ const FinanceEngine=(()=>{
     for(const latest of recurringCommitments(commitments)){
       if(!latest.dueDate)continue;
       let next=nextDateByCadence(latest.dueDate,latest.cadence);
-      for(let steps=0;next&&next<horizon&&steps<150;steps++){
+      for(let steps=0;next&&next<horizon&&steps<400;steps++){
         const key=`${norm(latest.name)}|${next}`;
         if(latest.recurrenceEnd&&next>latest.recurrenceEnd)break;
         if(next>=today&&!seen.has(key)){
@@ -92,7 +92,7 @@ const FinanceEngine=(()=>{
       if(l.completed||l.archived)continue;
       let due=l.nextDueDate||l.firstDueDate;
       const end=l.recurrenceEnd||l.finalDueDate||'';
-      for(let step=0;Number(l.monthly||0)>0&&!l.monthlyPhaseComplete&&due&&due<horizon&&step<span+4;step++){
+      for(let step=0;Number(l.monthly||0)>0&&!l.monthlyPhaseComplete&&due&&due<horizon&&step<240;step++){
         if(end&&due>end)break;
         const amount=liabilityAmountForMonth(l,monthKey(due)),key=`${norm(l.name)}|${due}`;
         if(due>=today&&amount>0&&!seen.has(key)){
