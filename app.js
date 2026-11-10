@@ -121,19 +121,25 @@ const FinanceApp=(()=>{
   function renderProjection(){
     const host=$('#projectionList');if(!host)return;
     const rows=FinanceEngine.projection(state,6);
-    const due=FinanceEngine.scheduledCommitments(state.commitments,new Date(),6,state.liabilities)
-      .filter(x=>(x.liabilityId||x.liabilityKey)&&x.active!==false&&!x.paidDate);
+    const endInclusive=end=>{
+      const d=FinanceEngine.parse(end);d.setDate(d.getDate()-1);return FinanceEngine.iso(d);
+    };
     host.innerHTML=rows.map(r=>{
-      const key=FinanceEngine.iso(r.date).slice(0,7);
-      const installments=due.filter(x=>String(x.dueDate||'').slice(0,7)===key);
-      const detail=installments.length
-        ?`<small class="projection-dates">Scadenze: ${installments.slice(0,4).map(x=>`${esc(x.name)} · ${esc(dueLabel(x.dueDate))}`).join(' · ')}${installments.length>4?' · +'+(installments.length-4)+' altre':''}</small>`
-        :'';
-      return `<div class="projection-row"><b>${monthFmt.format(r.date)}</b><strong>${money0(r.capacity)}</strong>
-        <span>Rate/fisse ${money0(r.fixed)}</span><span class="${r.gap>0?'warn':'good'}">${r.gap>0?`−${money0(r.gap)} dal target`:'margine obiettivo'}</span>
-        ${detail}</div>`;
+      const due=[...r.rateItems,...r.recurringItems,...r.oneOffItems,...r.overdueItems]
+        .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+      const details=due.length?'<small class="projection-dates">Scadenze ('+due.length+'): '+
+        due.slice(0,4).map(x=>esc(x.name)+' · '+esc(dueLabel(x.date))).join(' · ')+
+        (due.length>4?' · +'+(due.length-4)+' altre':'')+'</small>'
+        :'<small class="projection-dates">Nessuna uscita programmata nel ciclo.</small>';
+      return '<div class="projection-row"><b>'+esc(monthFmt.format(r.date))+
+        '<small class="projection-cycle">'+esc(dueLabel(r.cycleStart))+' – '+esc(dueLabel(endInclusive(r.cycleEnd)))+'</small></b>'+
+        '<strong>'+money0(r.capacity)+'</strong>'+
+        '<span>Rate e uscite '+money0(r.fixed)+'</span>'+
+        '<span class="'+(r.gap>0?'warn':'good')+'">'+(r.gap>0?'−'+money0(r.gap)+' dal target':'Margine obiettivi')+'</span>'+
+        details+'</div>';
     }).join('');
   }
+
   function renderHistory(){const host=$('#historyList');if(!host)return;const h=Array.isArray(setting('budgetCycleHistory',[]))?setting('budgetCycleHistory',[]):[];host.innerHTML=h.length?h.slice(0,6).map(x=>`<div class="history-row"><b>${esc(x.cycle)}</b><strong>${money0(x.budgetSpent||0)}</strong><span>Speso nel ciclo</span><span>Target ${money0(x.budgetTarget||0)}</span></div>`).join(''):'<div class="empty">Lo storico comparirà dal prossimo ciclo stipendio.</div>'}
 
   function renderGoals(){const m=model(),active=state.goals.filter(g=>!g.completed&&Number(g.target||0)>Number(g.current||0));$('#goalCapacity').textContent=m.salaryNet?`${money(m.goalCapacity)} disponibili nel mese tipo`:'Imposta lo stipendio per calcolare la capacità mensile.';$('#goalsList').innerHTML=active.length?active.map(g=>{const s=FinanceEngine.goalStats(g),need=s.monthly?`${money0(s.monthly)}/mese`:'Senza scadenza';return `<article class="goal-card"><h3>${esc(g.name)}</h3><div class="goal-amount">${money(s.current)} <span style="font-size:15px;color:var(--secondary);font-weight:600">/ ${money(s.target)}</span></div><div class="progress green"><i style="width:${s.pct}%"></i></div><div class="goal-meta"><span>${Math.round(s.pct)}% · ${money(s.remaining)} mancanti</span><span>${need}</span></div><div class="goal-actions"><button class="primary" data-contribute="${g.id}" type="button">Accantona</button><button class="secondary" data-goal="${g.id}" type="button">Modifica</button></div></article>`}).join(''):'<div class="empty">Nessun obiettivo attivo.</div>'}
