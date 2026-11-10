@@ -251,6 +251,44 @@ async function main(){
     assert.equal(b.rateItems[0].projected,true);
   }
 
+  {
+    // A zero residual alone must not silently close an unpaid plan.
+    const changes=[];
+    const db={put:async(store,value)=>changes.push({store,value}),add:async()=>0};
+    const loan={id:70,name:'Finanziamento sintetico',monthly:35,
+      remaining:0,installmentsRemaining:0,completed:false,
+      nextDueDate:'2026-12-01',firstDueDate:'2026-01-01',archived:false};
+    await E.repairSchedules(db,{liabilities:[loan],commitments:[]},new Date(2026,10,10,12));
+    assert.ok(!changes.some(x=>x.store==='liabilities'&&x.value.completed),
+      'la manutenzione non deve chiudere un piano con una scadenza ancora impostata');
+    const month=E.loanCycleAudit({liabilities:[loan],commitments:[],
+      settings,budgets:[]},'2026-11',new Date(2026,10,10,12));
+    assert.equal(month[0].open,true);
+    assert.equal(month[0].code,'included');
+    assert.equal(month[0].due[0].date,'2026-12-01');
+  }
+
+  {
+    // An excluded loan stays excluded and appears in the local audit, never
+    // silently restored or counted as a new payment.
+    const loan={id:91,name:'Prestito sintetico',monthly:50,
+      nextDueDate:'2026-12-01',firstDueDate:'2026-01-01'};
+    const entries=[
+      {...loan,id:1,completed:true},
+      {...loan,id:2,archived:true},
+      {...loan,id:3,monthlyPhaseComplete:true},
+      {...loan,id:4,nextDueDate:''}
+    ];
+    const a=E.loanCycleAudit({liabilities:entries,commitments:[],
+      settings,budgets:[]},'2026-11',new Date(2026,10,10,12));
+    const codes=a.map(x=>x.code);
+    for(const code of ['completed','archived','phase','no-date'])
+      assert.ok(codes.includes(code),'diagnostic must report '+code);
+    const b=E.monthBreakdown({liabilities:entries,commitments:[],settings,budgets:[]},
+      '2026-11',new Date(2026,10,10,12));
+    cents(b.rateTotal,0,'non vengono riattivati debiti senza conferma');
+  }
+
   console.log('Financial engine tests: OK');
 }
 
