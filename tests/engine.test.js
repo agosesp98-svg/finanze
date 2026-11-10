@@ -277,7 +277,7 @@ async function main(){
       {...loan,id:1,completed:true},
       {...loan,id:2,archived:true},
       {...loan,id:3,monthlyPhaseComplete:true},
-      {...loan,id:4,nextDueDate:''}
+      {...loan,id:4,nextDueDate:'',firstDueDate:''}
     ];
     const a=E.loanCycleAudit({liabilities:entries,commitments:[],
       settings,budgets:[]},'2026-11',new Date(2026,10,10,12));
