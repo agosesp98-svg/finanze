@@ -1,19 +1,20 @@
 /* Client-only PWA update controls. App financial records stay in IndexedDB. */
 (()=>{
 'use strict';
-const VERSION='20261110d';
+const VERSION='20261110e';
 const label=()=>document.getElementById('finanzeVersionLabel');
 const status=()=>document.getElementById('finanzeUpdateStatus');
-const message=msg=>{const el=status();if(el)el.textContent=msg};
+const message=msg=>{for(const el of [status(),document.getElementById('finanzeHomeUpdateStatus')])if(el)el.textContent=msg};
 let running=false;
 function showVersion(){
- const el=label();
- if(el&&el.textContent!==VERSION)el.textContent=VERSION;
+ for(const el of [label(),...document.querySelectorAll('[data-finanze-version]')]){
+  if(el&&el.textContent!==VERSION)el.textContent=VERSION;
+ }
 }
 async function upgrade(){
  if(running)return;
- const button=document.querySelector('[data-check-updates]');
- if(button)button.disabled=true;
+ const buttons=[...document.querySelectorAll('[data-check-updates]')];
+ buttons.forEach(button=>{button.disabled=true});
  running=true;
  try{
   if(typeof navigator.onLine==='boolean'&&!navigator.onLine){
@@ -47,7 +48,7 @@ async function upgrade(){
   message(err?.message||'Aggiornamento non riuscito. I dati locali non sono stati modificati.');
  }finally{
   running=false;
-  if(button)button.disabled=false;
+  buttons.forEach(button=>{button.disabled=false});
  }
 }
 document.addEventListener('click',e=>{
