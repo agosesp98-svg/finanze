@@ -155,3 +155,9 @@
 .excluded-loans[open] summary::after{transform:rotate(180deg)}
 .excluded-loans p{font-size:12px;line-height:1.5;color:var(--secondary);margin:3px 2px 12px}
 .excluded-loans .list-row{min-width:0}
+
+/* Visible build and safe PWA update controls. */
+.app-version-panel .helper{line-height:1.5;margin:0 0 11px}
+.app-version-panel .helper strong{color:var(--text);font-weight:750;font-variant-numeric:tabular-nums}
+.app-version-panel [data-check-updates]{display:block;width:100%;min-height:48px;margin:5px 0 10px}
+#finanzeUpdateStatus:not(:empty){margin:10px 0 12px;padding:10px 12px;border-radius:11px;background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:650;overflow-wrap:anywhere}
