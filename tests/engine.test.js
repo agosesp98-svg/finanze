@@ -86,7 +86,7 @@ async function main(){
       accounts:[],budgets:[],liabilities:[],goals:[],settings,
       commitments:[{id:1,name:'Nuovo servizio',amount:30,dueDate:'2026-12-05',firstDueDate:'2026-12-05',cadence:'Mensile',recurring:true,active:true}]
     },4,now);
-    assert.deepEqual(p.map(x=>x.fixed),[0,0,30,30],'una vera ricorrenza futura deve partire solo dalla firstDueDate');
+    assert.deepEqual(p.map(x=>x.fixed),[0,30,30,30],'il ciclo di novembre comprende la scadenza del 5 dicembre');
     const m=E.calculate({accounts:[],budgets:[],liabilities:[],goals:[],settings,commitments:[{id:1,name:'Nuovo servizio',amount:30,dueDate:'2026-12-05',firstDueDate:'2026-12-05',cadence:'Mensile',recurring:true,active:true}]},now);
     assert.equal(m.fixed,0,'una ricorrenza futura non deve pesare nel mese tipo corrente');
   }
@@ -158,6 +158,83 @@ async function main(){
     assert.equal(moved.filter(x=>x.dueDate==='2026-12-17').length,1,'nessun doppione quando la scadenza diventa reale');
     assert.equal(moved.find(x=>x.dueDate==='2026-12-17').projected,undefined);
     assert.equal(E.scheduledCommitments([],on,3).length,0,'le ricorrenze terminate non restano come fantasmi');
+  }
+
+
+  // Payday-cycle regression: November covers 10 November to 9 December.
+  {
+    const cycleNow=new Date(2026,10,10,12);
+    const dyson={id:3,name:'Dyson',monthly:43.29,firstDueDate:'2026-01-01',
+      nextDueDate:'2026-12-01',recurrenceEnd:'2026-12-01',completed:false};
+    const paid={id:31,liabilityId:3,name:'Dyson',amount:43.29,dueDate:'2026-11-01',
+      active:false,paidDate:'2026-11-01',cadence:'Mensile',recurring:true};
+    const december={id:32,liabilityId:3,name:'Dyson',amount:43.29,dueDate:'2026-12-01',
+      active:true,cadence:'Mensile',recurring:true};
+    const data={accounts:[],budgets:[],settings,goals:[],liabilities:[dyson],
+      commitments:[paid,december]};
+    const month=E.monthBreakdown(data,'2026-11',cycleNow);
+    assert.equal(month.cycleStart,'2026-11-10');
+    assert.equal(month.cycleEnd,'2026-12-10');
+    cents(month.rateTotal,43.29);
+    assert.deepEqual(month.rateItems.map(x=>x.date),['2026-12-01'],
+      'la rata Dyson di dicembre va nel ciclo novembre, non quella gia pagata');
+    const projection=E.projection(data,2,cycleNow);
+    cents(projection[0].rateTotal,43.29);
+    cents(projection[1].rateTotal,0);
+    const afterPayment=E.monthBreakdown({...data,commitments:[
+      {...paid}, {...december,active:false,paidDate:'2026-12-01'}]},
+      '2026-11',cycleNow);
+    cents(afterPayment.rateTotal,0,'una rata pagata non va riservata di nuovo');
+  }
+
+  {
+    const on=new Date(2026,10,10,12);
+    const s={accounts:[],budgets:[],settings,goals:[],liabilities:[],
+      commitments:[
+        {id:1,name:'Una tantum',amount:50,dueDate:'2026-11-25',
+          active:true,cadence:'Una tantum',recurring:false},
+        {id:2,name:'Ogni tre settimane',amount:20,dueDate:'2026-11-11',
+          active:true,cadence:'Ogni 21 giorni',recurring:true},
+        {id:3,name:'Gia pagata',amount:18,dueDate:'2026-11-17',
+          active:false,paidDate:'2026-11-17',cadence:'Una tantum',recurring:false}
+      ]};
+    const breakdown=E.monthBreakdown(s,'2026-11',on);
+    cents(breakdown.oneOffTotal,50);
+    cents(breakdown.recurringTotal,40);
+    cents(breakdown.fixedTotal,90);
+    assert.deepEqual(breakdown.recurringItems.map(x=>x.date),['2026-11-11','2026-12-02']);
+    assert.equal(E.nextDateByCadence('2026-11-11','Settimanale'),'2026-11-18');
+    assert.equal(E.nextDateByCadence('2026-11-11','Ogni 14 giorni'),'2026-11-25');
+    assert.equal(E.nextDateByCadence('2026-11-11','Ogni 21 giorni'),'2026-12-02');
+    assert.equal(E.nextDateByCadence('2026-11-11','Mensile'),'2026-12-11');
+    assert.equal(E.nextDateByCadence('2026-11-11','Una tantum'),null);
+    const overdue=E.monthBreakdown({...s,commitments:[
+      {id:4,name:'Uscita scaduta',amount:15,dueDate:'2026-10-25',
+        active:true,cadence:'Una tantum'}]},'2026-11',on);
+    cents(overdue.overdueTotal,15,'il ciclo attuale riporta gli arretrati del ciclo precedente');
+  }
+
+  {
+    const on=new Date(2026,10,10,12);
+    const b=E.monthBreakdown({
+      budgets:[{id:1,name:'Vita',targetBudget:400,spent:150}],
+      commitments:[],liabilities:[],goals:[],settings
+    },'2026-11',on);
+    cents(b.budgetTotal,250,'il ciclo corrente considera soltanto budget ancora da spendere');
+    const future=E.monthBreakdown({
+      budgets:[{id:1,name:'Vita',targetBudget:400,spent:150}],
+      commitments:[],liabilities:[],goals:[],settings
+    },'2026-12',on);
+    cents(future.budgetTotal,400,'per un ciclo futuro si considera il budget pieno');
+  }
+
+  {
+    const on=new Date(2026,10,10,12);
+    const final=E.monthBreakdown({settings,budgets:[],goals:[],commitments:[],
+      liabilities:[{id:8,name:'Finanziamento finale',monthly:0,monthlyPhaseComplete:true,
+        finalPayment:200,finalPaymentDate:'2026-12-01',completed:false}]},
+      '2026-11',on);
+    cents(final.rateTotal,200,'il pagamento finale deve comparire anche dopo la fine delle rate ordinarie');
   }
 
   console.log('Financial engine tests: OK');
