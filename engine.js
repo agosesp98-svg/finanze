@@ -26,11 +26,22 @@ const FinanceEngine=(()=>{
     return iso(d);
   }
 
+  function recurrenceDays(value){
+    const c=norm(value);
+    if(c.includes('21 giorni')||c.includes('3 settiman'))return 21;
+    if(c.includes('14 giorni')||c.includes('2 settiman'))return 14;
+    if(c.includes('settiman'))return 7;
+    return 0;
+  }
+  function isRecurringCadence(cadence){
+    const c=norm(cadence);
+    return recurrenceDays(c)>0||c.includes('mensil')||c.includes('ogni mese');
+  }
   function monthlyEquivalent(c){
     const cadence=norm(c.cadence),amount=Number(c.amount||0);
-    if(cadence.includes('14 giorni'))return amount*26/12;
-    if(cadence.includes('settiman'))return amount*52/12;
-    if(cadence.includes('mensil'))return amount;
+    const days=recurrenceDays(cadence);
+    if(days)return amount*365.25/days/12;
+    if(cadence.includes('mensil')||cadence.includes('ogni mese'))return amount;
     return 0;
   }
 
@@ -39,7 +50,7 @@ const FinanceEngine=(()=>{
     for(const c of commitments){
       if(c.archived||c.liabilityId||c.liabilityKey)continue;
       const cadence=norm(c.cadence);
-      if(!(c.recurring===true||cadence.includes('mensil')||cadence.includes('14 giorni')||cadence.includes('settiman')))continue;
+      if(!(c.recurring===true||isRecurringCadence(cadence)))continue;
       const key=norm(c.name);if(!key)continue;
       const old=recurring.get(key);
       if(!old||String(c.dueDate||'')>String(old.dueDate||''))recurring.set(key,c);
@@ -78,11 +89,10 @@ const FinanceEngine=(()=>{
     }
     // Only virtual future installments; the already recorded due date wins when present.
     for(const l of liabilities){
-      if(l.completed||l.archived||Number(l.monthly||0)<=0)continue;
+      if(l.completed||l.archived)continue;
       let due=l.nextDueDate||l.firstDueDate;
-      if(!due)continue;
       const end=l.recurrenceEnd||l.finalDueDate||'';
-      for(let step=0;due&&due<horizon&&step<span+4;step++){
+      for(let step=0;Number(l.monthly||0)>0&&!l.monthlyPhaseComplete&&due&&due<horizon&&step<span+4;step++){
         if(end&&due>end)break;
         const amount=liabilityAmountForMonth(l,monthKey(due)),key=`${norm(l.name)}|${due}`;
         if(due>=today&&amount>0&&!seen.has(key)){
@@ -166,19 +176,58 @@ const FinanceEngine=(()=>{
     return goals.filter(g=>!g.completed&&Number(g.target||0)>Number(g.current||0)).sort((a,b)=>rank(a.priority)-rank(b.priority)||String(a.targetDate||'9999').localeCompare(String(b.targetDate||'9999')))[0]||null;
   }
 
+  // The label identifies the payday cycle: [10th, 10th of next month).
+  function salaryCycleBounds(key,settings=[]){
+    const match=/^(\d{4})-(\d{2})$/.exec(String(key||''));
+    if(!match)throw Error('Mese del ciclo non valido.');
+    const year=Number(match[1]),month=Number(match[2]);
+    if(month<1||month>12)throw Error('Mese del ciclo non valido.');
+    const day=clamp(Number(setting(settings,'salaryDay',setting(settings,'salaryLatestDay',10)))||10,1,28);
+    return{start:iso(new Date(year,month-1,day,12)),end:iso(new Date(year,month,day,12)),day};
+  }
+
   function monthBreakdown(snapshot,key,now=new Date()){
     const {budgets=[],liabilities=[],commitments=[],settings=[],goals=[]}=snapshot;
-    const date=parse(`${key}-01`)||now;
-    const budgetItems=budgets.filter(b=>budgetTarget(b)>0).map(b=>({kind:'budget',id:b.id,name:b.name,amount:budgetTarget(b)}));
+    const date=parse(key+'-01')||now;
+    const {start,end,day}=salaryCycleBounds(key,settings);
+    const budgetItems=budgets.filter(b=>!b.archived&&budgetTarget(b)>0)
+      .map(b=>({kind:'budget',id:b.id,name:b.name,amount:budgetTarget(b)}));
     const budgetTotal=budgetItems.reduce((s,x)=>s+x.amount,0);
-    const rateItems=liabilities.filter(l=>liabilityAmountForMonth(l,key)>0)
-      .map(l=>({kind:'liability',id:l.id,name:l.name,amount:liabilityAmountForMonth(l,key)}));
-    const recurringItems=recurringCommitments(commitments)
-      .filter(c=>(!c.firstDueDate||key>=monthKey(c.firstDueDate))&&(!c.recurrenceEnd||key<=monthKey(c.recurrenceEnd)))
-      .map(c=>({kind:'recurring',id:c.id,name:c.name,amount:monthlyEquivalent(c)}));
-    const rateTotal=rateItems.reduce((s,x)=>s+x.amount,0),recurringTotal=recurringItems.reduce((s,x)=>s+x.amount,0),fixedTotal=rateTotal+recurringTotal;
-    const salaryNet=Number(setting(settings,'salaryNet',0)||0),plannedOutflow=budgetTotal+fixedTotal,capacity=Math.max(0,salaryNet-plannedOutflow),goal=primaryGoal(goals,date),goalNeed=goal?goalStats(goal,date).monthly:null;
-    return{month:key,date,salaryNet,budgetItems,budgetTotal,rateItems,rateTotal,recurringItems,recurringTotal,fixedTotal,plannedOutflow,capacity,goal,goalNeed,gap:goalNeed?Math.max(0,goalNeed-capacity):0};
+    const scheduled=scheduledCommitments(commitments,parse(start),3,liabilities);
+    const pending=scheduled.filter(x=>!x.archived&&x.active!==false&&!x.paidDate
+      &&x.dueDate>=start&&x.dueDate<end);
+    const toItem=x=>({id:x.id??x.sourceCommitmentId??x.liabilityId,name:x.name,
+      amount:Number(x.amount||0),date:x.dueDate,accountId:x.accountId,
+      projected:!!x.projected,estimated:!!x.estimated,
+      fundedByGoal:!!x.fundedByGoal,balloon:!!x.balloon,
+      kind:x.liabilityId||x.liabilityKey?'liability':(x.recurring===true||isRecurringCadence(x.cadence)?'recurring':'oneoff')});
+    const classified=pending.map(toItem);
+    const rateItems=classified.filter(x=>x.kind==='liability');
+    const recurringItems=classified.filter(x=>x.kind==='recurring');
+    const oneOffItems=classified.filter(x=>x.kind==='oneoff');
+    const rateTotal=rateItems.filter(x=>!x.fundedByGoal).reduce((s,x)=>s+x.amount,0);
+    const recurringTotal=recurringItems.reduce((s,x)=>s+x.amount,0);
+    const oneOffTotal=oneOffItems.reduce((s,x)=>s+x.amount,0);
+    // The current cycle carries unpaid bills from the previous 10-to-10 cycle.
+    // Future cycles do not repeatedly reserve the same arrears.
+    const currentCycle=cycleStart(settings,now);
+    const previous=iso(new Date(Number(start.slice(0,4)),Number(start.slice(5,7))-2,day,12));
+    const overdueItems=key===monthKey(currentCycle)
+      ?scheduled.filter(x=>!x.projected&&!x.archived&&x.active!==false&&!x.paidDate
+        &&x.dueDate>=previous&&x.dueDate<start).map(toItem)
+      :[];
+    const overdueTotal=overdueItems.filter(x=>!x.fundedByGoal).reduce((s,x)=>s+x.amount,0);
+    const fixedTotal=rateTotal+recurringTotal+oneOffTotal+overdueTotal;
+    const salaryNet=Number(setting(settings,'salaryNet',0)||0);
+    const plannedOutflow=budgetTotal+fixedTotal;
+    const capacity=Math.max(0,salaryNet-plannedOutflow);
+    const goal=primaryGoal(goals,date),goalNeed=goal?goalStats(goal,date).monthly:null;
+    const excludedGoalTotal=rateItems.filter(x=>x.fundedByGoal).reduce((s,x)=>s+x.amount,0);
+    return{month:key,date,cycleStart:start,cycleEnd:end,salaryNet,
+      budgetItems,budgetTotal,rateItems,rateTotal,recurringItems,recurringTotal,
+      oneOffItems,oneOffTotal,overdueItems,overdueTotal,excludedGoalTotal,
+      fixedTotal,plannedOutflow,capacity,goal,goalNeed,
+      gap:goalNeed?Math.max(0,goalNeed-capacity):0};
   }
 
   function commitmentAccountId(c,liabilities,primary){
@@ -242,7 +291,16 @@ const FinanceEngine=(()=>{
     });
   }
 
-  function nextDateByCadence(date,cadence){if(!date)return null;const d=parse(date),c=norm(cadence);if(!d)return null;if(c.includes('14 giorni'))d.setDate(d.getDate()+14);else if(c.includes('settiman'))d.setDate(d.getDate()+7);else if(c.includes('mensil')){const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+1);const max=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,max))}else return null;return iso(d)}
+  function nextDateByCadence(date,cadence){
+    if(!date)return null;const d=parse(date),c=norm(cadence);if(!d)return null;
+    const days=recurrenceDays(c);
+    if(days)d.setDate(d.getDate()+days);
+    else if(c.includes('mensil')||c.includes('ogni mese')){
+      const day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+1);
+      const max=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();d.setDate(Math.min(day,max));
+    }else return null;
+    return iso(d);
+  }
 
   async function syncBudgetCycle(db,snapshot,now=new Date()){
     const {budgets=[],settings=[]}=snapshot,current=cycleStart(settings,now),stored=String(setting(settings,'activeBudgetCycle','')||'');
@@ -265,11 +323,11 @@ const FinanceEngine=(()=>{
       if(Number(l.finalPayment||0)>0&&l.monthlyPhaseComplete&&l.finalPaymentDate){const exists=linked.some(c=>c.active!==false&&String(c.dueDate)===String(l.finalPaymentDate)&&Number(c.amount||0)===Number(l.finalPayment||0));if(!exists){await db.add('commitments',{name:l.name||'Pagamento finale',amount:Number(l.finalPayment),dueDate:l.finalPaymentDate,cadence:'Una tantum',estimated:false,active:true,recurring:false,generated:true,liabilityId:l.id,liabilityKey:l.scheduleKey||'',note:'Pagamento finale collegato al finanziamento'});changed=true}}
       else if(Number(l.monthly||0)>0&&l.nextDueDate){const beyond=cutoff&&String(l.nextDueDate)>String(cutoff),exists=linked.some(c=>c.active!==false&&String(c.dueDate)===String(l.nextDueDate));if(!beyond&&!exists){await db.add('commitments',{name:l.name,amount:liabilityAmountForMonth(l,monthKey(l.nextDueDate)),dueDate:l.nextDueDate,cadence:'Mensile',estimated:false,active:true,recurring:true,generated:true,liabilityId:l.id,liabilityKey:l.scheduleKey||'',note:'Scadenza collegata al piano rate'});changed=true}}
     }
-    const groups=new Map();for(const c of commitments){if(c.archived||c.liabilityId||c.liabilityKey)continue;const cadence=norm(c.cadence);if(!(c.recurring===true||cadence.includes('mensil')||cadence.includes('14 giorni')||cadence.includes('settiman')))continue;const key=norm(c.name);if(!key)continue;const old=groups.get(key);if(!old||String(c.dueDate||'')>String(old.dueDate||''))groups.set(key,c)}
+    const groups=new Map();for(const c of commitments){if(c.archived||c.liabilityId||c.liabilityKey)continue;const cadence=norm(c.cadence);if(!(c.recurring===true||isRecurringCadence(cadence)))continue;const key=norm(c.name);if(!key)continue;const old=groups.get(key);if(!old||String(c.dueDate||'')>String(old.dueDate||''))groups.set(key,c)}
     const today=iso(now);for(const latest of groups.values()){if(latest.active!==false)continue;let next=nextDateByCadence(latest.dueDate,latest.cadence);if(!next)continue;while(next<today)next=nextDateByCadence(next,latest.cadence);if(latest.recurrenceEnd&&next>latest.recurrenceEnd)continue;if(commitments.some(c=>c.active!==false&&norm(c.name)===norm(latest.name)&&c.dueDate===next))continue;const copy={...latest};delete copy.id;delete copy.paidDate;delete copy.paidAmount;copy.dueDate=next;copy.active=true;copy.generated=true;copy.recurring=true;copy.estimated=!!(latest.variableAmount||latest.estimated);await db.add('commitments',copy);changed=true}
     return{changed};
   }
 
-  return{norm,iso,parse,calculate,scheduledCommitments,liabilityAmountForMonth,salaryDate,cycleStart,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
+  return{norm,iso,parse,calculate,scheduledCommitments,liabilityAmountForMonth,salaryDate,cycleStart,salaryCycleBounds,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceEngine;
