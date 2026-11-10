@@ -115,6 +115,20 @@ const FinanceApp=(()=>{
         <span class="row-value row-value-stack"><strong>${money(amount)}</strong><small class="row-date">${final?'Finale':'Scad.'} ${esc(dueLabel(nextDate))}</small></span>
         <span class="chevron">›</span></button>`;
     }).join(''):'<div class="empty">Nessuna rata attiva.</div>';
+    const excluded=state.liabilities.filter(l=>l.completed||l.archived);
+    const excludedHost=$('#excludedLoansDetails'),excludedList=$('#excludedLoanList');
+    if(excludedHost&&excludedList){
+      excludedHost.hidden=!excluded.length;
+      const count=$('#excludedLoansSummary');
+      if(count)count.textContent='Finanziamenti esclusi ('+excluded.length+')';
+      excludedList.innerHTML=excluded.map(l=>{
+        const reason=[l.archived?'Archiviato':null,l.completed?'Completato':null].filter(Boolean).join(' · ');
+        const date=l.nextDueDate||l.finalPaymentDate||'';
+        return `<button class="list-row" data-liability="${l.id}" type="button"><span class="row-icon">${svg('card')}</span>
+          <span class="row-copy"><b>${esc(l.name)}</b><span>${esc(reason)}${date?' · '+esc(dueLabel(date)):''}</span></span>
+          <span class="chevron">›</span></button>`;
+      }).join('');
+    }
     renderProjection();renderHistory();
   }
 
