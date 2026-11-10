@@ -237,6 +237,20 @@ async function main(){
     cents(final.rateTotal,200,'il pagamento finale deve comparire anche dopo la fine delle rate ordinarie');
   }
 
+  {
+    // A stale nextDueDate from January must not hide a December installment
+    // from the November salary cycle. It is a forecast, not a saved payment.
+    const on=new Date(2026,10,10,12);
+    const b=E.monthBreakdown({settings,budgets:[],goals:[],commitments:[],
+      liabilities:[{id:42,name:'Prestito non aggiornato',monthly:55,
+        nextDueDate:'2026-01-01',firstDueDate:'2026-01-01',
+        recurrenceEnd:'2026-12-01',completed:false}]},
+      '2026-11',on);
+    cents(b.rateTotal,55);
+    assert.deepEqual(b.rateItems.map(x=>x.date),['2026-12-01']);
+    assert.equal(b.rateItems[0].projected,true);
+  }
+
   console.log('Financial engine tests: OK');
 }
 
