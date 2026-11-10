@@ -137,3 +137,21 @@
 }
 
 .projection-intro{margin:-2px 2px 12px;color:var(--secondary);font-size:12px;line-height:1.5}
+
+
+/* Loan status recovery controls and excluded-loan discovery. */
+.loan-editor-state{border:1px solid var(--separator);border-radius:17px;padding:13px 14px;margin-top:4px;background:var(--surface)}
+.loan-editor-state h3{font-size:15px;line-height:1.3;font-weight:740;margin:0 0 9px}
+.loan-editor-notice{background:var(--orange-soft);color:var(--orange);font-size:12px;line-height:1.5;border-radius:12px;padding:10px;margin:0 0 9px}
+.loan-check-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;min-height:54px;border-top:1px solid var(--separator)}
+.loan-check-row span{display:grid;gap:4px;flex:1;min-width:0}
+.loan-check-row b{font-size:13px;line-height:1.3}
+.loan-check-row small{font-size:11px;font-weight:450;line-height:1.4;color:var(--secondary)}
+.loan-check-row input[type="checkbox"]{width:21px;height:21px;min-width:21px;flex:0 0 21px;accent-color:var(--blue);padding:0;margin:0}
+.excluded-loans{margin:12px 0 0;min-width:0}
+.excluded-loans[hidden]{display:none}
+.excluded-loans summary{cursor:pointer;min-height:42px;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:11px 4px;font-size:13px;font-weight:700;color:var(--secondary)}
+.excluded-loans summary::after{content:'⌄';font-size:18px;color:var(--secondary);flex:none}
+.excluded-loans[open] summary::after{transform:rotate(180deg)}
+.excluded-loans p{font-size:12px;line-height:1.5;color:var(--secondary);margin:3px 2px 12px}
+.excluded-loans .list-row{min-width:0}
