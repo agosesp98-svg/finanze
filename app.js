@@ -250,23 +250,22 @@ const FinanceApp=(()=>{
 
   function renderProjection(){
     const host=$('#projectionList');if(!host)return;
-    const rows=FinanceEngine.projection(state,6);
+    const months=FinanceEngine.projection(state,6);
     const endInclusive=end=>{
       const d=FinanceEngine.parse(end);d.setDate(d.getDate()-1);return FinanceEngine.iso(d);
     };
-    host.innerHTML=rows.map(r=>{
-      const due=[...r.rateItems,...r.recurringItems,...r.oneOffItems,...r.overdueItems]
-        .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
-      const details=due.length?'<small class="projection-dates">Scadenze ('+due.length+'): '+
-        due.slice(0,4).map(x=>esc(x.name)+' · '+esc(dueLabel(x.date))).join(' · ')+
-        (due.length>4?' · +'+(due.length-4)+' altre':'')+'</small>'
-        :'<small class="projection-dates">Nessuna uscita programmata nel ciclo.</small>';
-      return '<div class="projection-row"><b>'+esc(monthFmt.format(r.date))+
-        '<small class="projection-cycle">'+esc(dueLabel(r.cycleStart))+' – '+esc(dueLabel(endInclusive(r.cycleEnd)))+'</small></b>'+
-        '<strong>'+money0(r.capacity)+'</strong>'+
-        '<span>Rate e uscite '+money0(r.fixed)+'</span>'+
-        '<span class="'+(r.gap>0?'warn':'good')+'">'+(r.gap>0?'−'+money0(r.gap)+' dal target':'Margine obiettivi')+'</span>'+
-        details+'</div>';
+    host.innerHTML=months.map(r=>{
+      const dates=[...r.rateItems,...r.recurringItems,...r.oneOffItems,...r.overdueItems]
+        .filter(x=>!x.fundedByGoal);
+      const sum=Number(r.fixed||0)+Number(r.monthlyBudget||0);
+      const period=dueLabel(r.cycleStart)+' – '+dueLabel(endInclusive(r.cycleEnd));
+      return '<div class="projection-row clean-projection-row">'+
+        '<div class="clean-projection-title"><b>'+esc(monthFmt.format(r.date))+'</b>'+
+        '<small>'+esc(period)+'</small></div>'+
+        '<div class="clean-projection-money"><small>Margine stimato</small><strong>'+
+          (r.salaryNet?money(r.capacity):'—')+'</strong></div>'+
+        '<div class="clean-projection-foot"><span>'+dates.length+' '+(dates.length===1?'scadenza':'scadenze')+
+        ' · Uscite e budget '+money(sum)+'</span><span>Dettaglio ›</span></div></div>';
     }).join('');
   }
 
@@ -439,8 +438,23 @@ const FinanceApp=(()=>{
       });
       return;
     }
+    const planJump=e.target.closest('[data-plan-jump]');
+    if(planJump){
+      const target=document.getElementById(planJump.dataset.planJump);
+      target?.scrollIntoView({block:'start',behavior:'smooth'});
+      target?.querySelector('h2')?.focus({preventScroll:true});
+      return;
+    }
+    if(e.target.closest('[data-open-expense]')){openQuickAdd('expense');return}
+    if(e.target.closest('#movementLoadMore')){movementLimit+=30;renderMovements();return}
+    if(e.target.closest('#scheduledExpand')){scheduledExpanded=!scheduledExpanded;renderPlan();return}
     if(e.target.closest('#homeManageAccounts')){openSettings();return}
-    const nav=e.target.closest('[data-view]');if(nav){switchView(nav.dataset.view);return}if(e.target.closest('#quickAdd')){openQuickAdd();return}if(e.target.closest('#settingsBtn')){openSettings();return}if(e.target.closest('[data-close-sheet]')||e.target.id==='sheetBackdrop'){closeSheet();return}const qm=e.target.closest('[data-quick-mode]');if(qm){openQuickAdd(qm.dataset.quickMode);return}const acc=e.target.closest('[data-account]');if(acc){openAccount(acc.dataset.account);return}const mov=e.target.closest('[data-movement]');if(mov){openMovement(mov.dataset.movement);return}const bud=e.target.closest('[data-budget]');if(bud){openBudget(bud.dataset.budget);return}const loanForecast=e.target.closest('[data-forecast-liability]');if(loanForecast){openLoanForecast(loanForecast.dataset.forecastLiability,loanForecast.dataset.forecastDate);return}const forecast=e.target.closest('[data-forecast-commitment]');if(forecast){openForecast(forecast.dataset.forecastCommitment,forecast.dataset.forecastDate);return}const com=e.target.closest('[data-commitment]');if(com){openCommitment(com.dataset.commitment);return}const pay=e.target.closest('[data-pay-commitment]');if(pay){payCommitment(pay.dataset.payCommitment);return}const li=e.target.closest('[data-liability]');if(li){openLiability(li.dataset.liability);return}const goal=e.target.closest('[data-goal]');if(goal){openGoal(goal.dataset.goal);return}const contribute=e.target.closest('[data-contribute]');if(contribute){contributeGoal(contribute.dataset.contribute);return}const filter=e.target.closest('[data-filter]');if(filter){movementFilter=filter.dataset.filter;renderMovements();return}const remove=e.target.closest('[data-remove-category]');if(remove){const i=Number(remove.dataset.removeCategory);if(customCategories[i]!=null){customCategories.splice(i,1);saveCustomCategories().then(()=>{$('#categoryChips').innerHTML=categoryChips()})}return}if(e.target.closest('[data-new-budget]')){openBudget();return}if(e.target.closest('[data-new-commitment]')){openCommitment();return}if(e.target.closest('[data-new-goal]')){openGoal();return}if(e.target.closest('[data-new-account]')){newAccount();return}if(e.target.closest('[data-backup]')){exportBackup();return}if(e.target.closest('[data-import]')){$('#backupInput').click();return}if(e.target.closest('[data-reset]')){if(confirm('Vuoi davvero cancellare tutti i dati locali?')){document.dispatchEvent(new Event('finanze:data-reset'));FinanceDB.clearAll().then(()=>location.reload())}return}if(e.target.closest('#spendCard')){openSpendDetail();return}});$('#backupInput').addEventListener('change',e=>importBackup(e.target.files?.[0]));document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()})}
+    const nav=e.target.closest('[data-view]');if(nav){switchView(nav.dataset.view);return}if(e.target.closest('#quickAdd')){openQuickAdd();return}if(e.target.closest('#settingsBtn')){openSettings();return}if(e.target.closest('[data-close-sheet]')||e.target.id==='sheetBackdrop'){closeSheet();return}const qm=e.target.closest('[data-quick-mode]');if(qm){openQuickAdd(qm.dataset.quickMode);return}const acc=e.target.closest('[data-account]');if(acc){openAccount(acc.dataset.account);return}const mov=e.target.closest('[data-movement]');if(mov){openMovement(mov.dataset.movement);return}const bud=e.target.closest('[data-budget]');if(bud){openBudget(bud.dataset.budget);return}const loanForecast=e.target.closest('[data-forecast-liability]');if(loanForecast){openLoanForecast(loanForecast.dataset.forecastLiability,loanForecast.dataset.forecastDate);return}const forecast=e.target.closest('[data-forecast-commitment]');if(forecast){openForecast(forecast.dataset.forecastCommitment,forecast.dataset.forecastDate);return}const com=e.target.closest('[data-commitment]');if(com){openCommitment(com.dataset.commitment);return}const pay=e.target.closest('[data-pay-commitment]');if(pay){payCommitment(pay.dataset.payCommitment);return}const li=e.target.closest('[data-liability]');if(li){openLiability(li.dataset.liability);return}const goal=e.target.closest('[data-goal]');if(goal){openGoal(goal.dataset.goal);return}const contribute=e.target.closest('[data-contribute]');if(contribute){contributeGoal(contribute.dataset.contribute);return}const filter=e.target.closest('[data-filter]');if(filter){movementFilter=filter.dataset.filter;movementLimit=30;renderMovements();return}const remove=e.target.closest('[data-remove-category]');if(remove){const i=Number(remove.dataset.removeCategory);if(customCategories[i]!=null){customCategories.splice(i,1);saveCustomCategories().then(()=>{$('#categoryChips').innerHTML=categoryChips()})}return}if(e.target.closest('[data-new-budget]')){openBudget();return}if(e.target.closest('[data-new-commitment]')){openCommitment();return}if(e.target.closest('[data-new-goal]')){openGoal();return}if(e.target.closest('[data-new-account]')){newAccount();return}if(e.target.closest('[data-backup]')){exportBackup();return}if(e.target.closest('[data-import]')){$('#backupInput').click();return}if(e.target.closest('[data-reset]')){if(confirm('Vuoi davvero cancellare tutti i dati locali?')){document.dispatchEvent(new Event('finanze:data-reset'));FinanceDB.clearAll().then(()=>location.reload())}return}if(e.target.closest('#spendCard')){openSpendDetail();return}});$('#movementSearch')?.addEventListener('input',e=>{
+    movementQuery=e.target.value;
+    movementLimit=30;
+    renderMovements();
+  });
+  $('#backupInput').addEventListener('change',e=>importBackup(e.target.files?.[0]));document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()})}
 
   async function init(){try{await load();await consumeRatePatch();await maintain();await load();render();bind();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').then(r=>r.update()).catch(()=>{})}catch(err){console.error(err);toast('Errore nel caricamento dei dati')}requestAnimationFrame(()=>setTimeout(()=>$('#boot').classList.add('hide'),120))}
   return{init};
