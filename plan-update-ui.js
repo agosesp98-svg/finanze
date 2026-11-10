@@ -86,7 +86,7 @@
       }
       append(top,list,ptext('Le pianificazioni precedenti saranno archiviate; tutti i '+p.preservedMovements+' movimenti storici restano invariati.'));
       const confirmPanel=section('Verifica e applica');
-      append(confirmPanel,ptext('Prima scarica un backup. Contiene dati personali e cronologia chat: conservalo in privato.'));
+      append(confirmPanel,ptext('Prima scarica un backup. Contiene i tuoi dati finanziari: conservalo in privato.'));
       const stack=node('div','stack'),error=node('div','inline-error'),feedback=node('p','plan-import-feedback');
       error.setAttribute('role','alert');
       feedback.setAttribute('role','status');
@@ -172,7 +172,7 @@
       });
       append(stack,backButton,applyButton);
       append(confirmPanel,stack,feedback,ackBox,error,
-        ptext('Lo storico dei movimenti viene mantenuto. La configurazione Cloudflare resta invariata.'));
+        ptext('Lo storico dei movimenti viene mantenuto. Non vengono cancellati i movimenti già registrati.'));
       append(body,top,confirmPanel);
       sheet('Verifica il piano',body);
     }catch(e){
