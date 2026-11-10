@@ -164,25 +164,25 @@ async function main(){
   // Payday-cycle regression: November covers 10 November to 9 December.
   {
     const cycleNow=new Date(2026,10,10,12);
-    const dyson={id:3,name:'Dyson',monthly:43.29,firstDueDate:'2026-01-01',
-      nextDueDate:'2026-12-01',recurrenceEnd:'2026-12-01',completed:false};
-    const paid={id:31,liabilityId:3,name:'Dyson',amount:43.29,dueDate:'2026-11-01',
-      active:false,paidDate:'2026-11-01',cadence:'Mensile',recurring:true};
-    const december={id:32,liabilityId:3,name:'Dyson',amount:43.29,dueDate:'2026-12-01',
+    const dyson={id:3,name:'Prestito simulato',monthly:47.31,firstDueDate:'2026-01-01',
+      nextDueDate:'2026-12-04',recurrenceEnd:'2026-12-04',completed:false};
+    const paid={id:31,liabilityId:3,name:'Prestito simulato',amount:47.31,dueDate:'2026-11-04',
+      active:false,paidDate:'2026-11-04',cadence:'Mensile',recurring:true};
+    const december={id:32,liabilityId:3,name:'Prestito simulato',amount:47.31,dueDate:'2026-12-04',
       active:true,cadence:'Mensile',recurring:true};
     const data={accounts:[],budgets:[],settings,goals:[],liabilities:[dyson],
       commitments:[paid,december]};
     const month=E.monthBreakdown(data,'2026-11',cycleNow);
     assert.equal(month.cycleStart,'2026-11-10');
     assert.equal(month.cycleEnd,'2026-12-10');
-    cents(month.rateTotal,43.29);
-    assert.deepEqual(month.rateItems.map(x=>x.date),['2026-12-01'],
-      'la rata Dyson di dicembre va nel ciclo novembre, non quella gia pagata');
+    cents(month.rateTotal,47.31);
+    assert.deepEqual(month.rateItems.map(x=>x.date),['2026-12-04'],
+      'la rata Prestito simulato di dicembre va nel ciclo novembre, non quella gia pagata');
     const projection=E.projection(data,2,cycleNow);
-    cents(projection[0].rateTotal,43.29);
+    cents(projection[0].rateTotal,47.31);
     cents(projection[1].rateTotal,0);
     const afterPayment=E.monthBreakdown({...data,commitments:[
-      {...paid}, {...december,active:false,paidDate:'2026-12-01'}]},
+      {...paid}, {...december,active:false,paidDate:'2026-12-04'}]},
       '2026-11',cycleNow);
     cents(afterPayment.rateTotal,0,'una rata pagata non va riservata di nuovo');
   }
