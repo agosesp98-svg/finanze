@@ -10,7 +10,7 @@ const FinanceApp=(()=>{
   const dateFmt=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'short'}),dateLong=new Intl.DateTimeFormat('it-IT',{day:'numeric',month:'long'}),monthFmt=new Intl.DateTimeFormat('it-IT',{month:'short',year:'numeric'});
   const today=()=>FinanceEngine.iso(new Date()),parse=FinanceEngine.parse,clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
   const CATEGORY_KEY='customExpenseCategories';
-  let movementFilter='all',toastTimer=null,customCategories=[];
+  let movementFilter='all',movementQuery='',movementLimit=30,scheduledExpanded=false,toastTimer=null,customCategories=[];
 
   const icons={
     calendar:'<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/>',card:'<rect x="3.5" y="5.5" width="17" height="13" rx="3"/><path d="M3.5 10h17M7 15h4"/>',wallet:'<path d="M5 6h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h11"/><path d="M15 11h5v4h-5a2 2 0 0 1 0-4Z"/>',lock:'<rect x="5" y="10" width="14" height="10" rx="3"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/>',down:'<path d="M12 4v15m-5-5 5 5 5-5"/>',up:'<path d="M12 20V5m-5 5 5-5 5 5"/>',arrows:'<path d="M5 8h14m-4-4 4 4-4 4M19 16H5m4 4-4-4 4-4"/>',edit:'<path d="m4 20 4.2-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"/><path d="m13.5 7.5 3 3"/>'
@@ -106,9 +106,66 @@ const FinanceApp=(()=>{
 
   function isUnclassified(m){return m.type==='expense'&&!m.budgetId&&(!m.category||norm(m.category)==='da classificare')}
   function renderMovements(){
-    const count=state.movements.filter(isUnclassified).length,notice=$('#unclassifiedNotice');notice.hidden=!count;if(count)notice.innerHTML=`<span><b>${count}</b> ${count===1?'movimento da sistemare':'movimenti da sistemare'}</span><button type="button" data-filter="unclassified">Mostra</button>`;
-    $$('#movementFilters button').forEach(b=>b.classList.toggle('active',b.dataset.filter===movementFilter));let items=state.movements;if(movementFilter==='expense')items=items.filter(m=>m.type==='expense');if(movementFilter==='income')items=items.filter(m=>m.type==='income');if(movementFilter==='unclassified')items=items.filter(isUnclassified);
-    $('#movementList').innerHTML=items.length?items.slice(0,150).map(m=>{const a=state.accounts.find(x=>Number(x.id)===Number(m.accountId)),positive=m.type==='income',negative=m.type==='expense',ic=positive?'down':negative?'up':m.type==='transfer'?'arrows':'edit',sign=positive?'+':negative?'−':'',cat=isUnclassified(m)?'Da sistemare':m.category||m.type||'';return `<button class="list-row" data-movement="${m.id}" type="button"><span class="row-icon ${positive?'green':negative?'red':''}">${svg(ic)}</span><span class="row-copy"><b>${esc(m.title||'Movimento')}</b><span>${m.date?dateFmt.format(parse(m.date)):''}${cat?` · ${esc(cat)}`:''}${a?` · ${esc(a.name)}`:''}</span></span><span class="row-value ${positive?'positive':negative?'negative':''}">${sign}${money(Math.abs(Number(m.amount||0)))}</span><span class="chevron">›</span></button>`}).join(''):'<div class="empty">Nessun movimento.</div>';
+    const now=new Date(),start=FinanceEngine.cycleStart(state.settings,now);
+    const startDate=parse(start),cycleEnd=FinanceEngine.iso(new Date(startDate.getFullYear(),startDate.getMonth()+1,startDate.getDate(),12));
+    const spent=state.movements.filter(m=>m.type==='expense'&&m.date>=start&&m.date<cycleEnd)
+      .reduce((s,m)=>s+Number(m.amount||0),0);
+    const income=state.movements.filter(m=>m.type==='income'&&m.date>=start&&m.date<cycleEnd)
+      .reduce((s,m)=>s+Number(m.amount||0),0);
+    $('#movementCycleExpenses').textContent=money(spent);
+    $('#movementCycleIncomes').textContent=money(income);
+
+    const count=state.movements.filter(isUnclassified).length,notice=$('#unclassifiedNotice');
+    notice.hidden=!count;
+    if(count)notice.innerHTML='<span><b>'+count+'</b> '+(count===1?'movimento da classificare':'movimenti da classificare')+
+      '</span><button type="button" data-filter="unclassified">Mostra</button>';
+    $$('#movementFilters button').forEach(button=>{
+      const active=button.dataset.filter===movementFilter;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-pressed',active?'true':'false');
+    });
+    const query=norm(movementQuery.trim());
+    let items=state.movements.filter(m=>{
+      if(movementFilter==='expense'&&m.type!=='expense')return false;
+      if(movementFilter==='income'&&m.type!=='income')return false;
+      if(movementFilter==='unclassified'&&!isUnclassified(m))return false;
+      if(!query)return true;
+      const account=state.accounts.find(a=>Number(a.id)===Number(m.accountId));
+      const content=[m.title,m.category,account?.name,m.date,Number(m.amount||0).toFixed(2)].join(' ');
+      return norm(content).includes(query);
+    });
+    const total=items.length;
+    items=items.slice(0,movementLimit);
+    $('#movementResultsCount').textContent=query||movementFilter!=='all'
+      ?total+' '+(total===1?'risultato':'risultati'):'';
+    const monthLabel=new Intl.DateTimeFormat('it-IT',{month:'long',year:'numeric'});
+    let lastMonth='';
+    const content=items.map(m=>{
+      const key=String(m.date||'').slice(0,7);
+      let header='';
+      if(key!==lastMonth){
+        lastMonth=key;
+        const parsed=key?parse(key+'-01'):null;
+        header='<div class="movement-month-label">'+(parsed?esc(monthLabel.format(parsed)):'Senza data')+'</div>';
+      }
+      const account=state.accounts.find(x=>Number(x.id)===Number(m.accountId));
+      const positive=m.type==='income',negative=m.type==='expense';
+      const ic=positive?'down':negative?'up':m.type==='transfer'?'arrows':'edit';
+      const sign=positive?'+':negative?'−':'';
+      const cat=isUnclassified(m)?'Da classificare':m.category||'';
+      const label=[m.date?dueLabel(m.date):'',cat,account?.name||''].filter(Boolean).join(' · ');
+      return header+'<button class="list-row movement-row" data-movement="'+m.id+'" type="button">'+
+        '<span class="row-icon '+(positive?'green':negative?'red':'')+'">'+svg(ic)+'</span>'+
+        '<span class="row-copy"><b>'+esc(m.title||'Movimento')+'</b><span>'+esc(label)+'</span></span>'+
+        '<span class="row-value '+(positive?'positive':negative?'negative':'')+'">'+sign+money(Math.abs(Number(m.amount||0)))+'</span>'+
+        '<span class="chevron" aria-hidden="true">›</span></button>';
+    }).join('');
+    $('#movementList').innerHTML=content||(query?
+      '<div class="empty">Nessun movimento trovato. Prova con un altro termine.</div>':
+      '<div class="empty">Nessun movimento da mostrare.</div>');
+    const more=$('#movementLoadMore');
+    more.hidden=total<=movementLimit;
+    if(!more.hidden)more.textContent='Mostra altri '+Math.min(30,total-movementLimit)+' movimenti';
   }
 
   function commitmentRow(x){
