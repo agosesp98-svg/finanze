@@ -272,7 +272,42 @@ const FinanceApp=(()=>{
 
   function renderHistory(){const host=$('#historyList');if(!host)return;const h=Array.isArray(setting('budgetCycleHistory',[]))?setting('budgetCycleHistory',[]):[];host.innerHTML=h.length?h.slice(0,6).map(x=>`<div class="history-row"><b>${esc(x.cycle)}</b><strong>${money0(x.budgetSpent||0)}</strong><span>Speso nel ciclo</span><span>Target ${money0(x.budgetTarget||0)}</span></div>`).join(''):'<div class="empty">Lo storico comparirà dal prossimo ciclo stipendio.</div>'}
 
-  function renderGoals(){const m=model(),active=state.goals.filter(g=>!g.completed&&Number(g.target||0)>Number(g.current||0));$('#goalCapacity').textContent=m.salaryNet?`${money(m.goalCapacity)} disponibili nel mese tipo`:'Imposta lo stipendio per calcolare la capacità mensile.';$('#goalsList').innerHTML=active.length?active.map(g=>{const s=FinanceEngine.goalStats(g),need=s.monthly?`${money0(s.monthly)}/mese`:'Senza scadenza';return `<article class="goal-card"><h3>${esc(g.name)}</h3><div class="goal-amount">${money(s.current)} <span style="font-size:15px;color:var(--secondary);font-weight:600">/ ${money(s.target)}</span></div><div class="progress green"><i style="width:${s.pct}%"></i></div><div class="goal-meta"><span>${Math.round(s.pct)}% · ${money(s.remaining)} mancanti</span><span>${need}</span></div><div class="goal-actions"><button class="primary" data-contribute="${g.id}" type="button">Accantona</button><button class="secondary" data-goal="${g.id}" type="button">Modifica</button></div></article>`}).join(''):'<div class="empty">Nessun obiettivo attivo.</div>'}
+  function renderGoals(){
+    const active=state.goals.filter(g=>!g.archived&&!g.completed&&Number(g.target||0)>Number(g.current||0))
+      .sort((a,b)=>{
+        const rank=g=>Number(g.priorityRank)||(norm(g.priority)==='alta'?1:norm(g.priority)==='media'?2:3);
+        return rank(a)-rank(b)||String(a.targetDate||'9999').localeCompare(String(b.targetDate||'9999'));
+      });
+    const totalSaved=active.reduce((sum,g)=>sum+Number(g.current||0),0);
+    const totalRemaining=active.reduce((sum,g)=>sum+Math.max(0,Number(g.target||0)-Number(g.current||0)),0);
+    $('#goalTotalSaved').textContent=money(totalSaved);
+    $('#goalTotalRemaining').textContent=money(totalRemaining);
+    $('#goalsCount').textContent=active.length+' '+(active.length===1?'attivo':'attivi');
+    const key=FinanceEngine.cycleStart(state.settings,new Date()).slice(0,7);
+    const cycle=FinanceEngine.monthBreakdown(state,key);
+    $('#goalCapacity').textContent=cycle.salaryNet
+      ?'Margine teorico di questo ciclo: '+money(cycle.capacity)+'. Gli accantonamenti non vengono trasferiti automaticamente.'
+      :'Per stimare quanto puoi accantonare, imposta lo stipendio nelle Impostazioni.';
+    const order=v=>Number(v.priorityRank)||(norm(v.priority)==='alta'?1:norm(v.priority)==='media'?2:3);
+    $('#goalsList').innerHTML=active.length?active.map(g=>{
+      const s=FinanceEngine.goalStats(g);
+      const priority=order(g),deadline=g.targetDate?'Entro '+dueLabel(g.targetDate):'Senza scadenza';
+      const required=s.monthly?' · '+money0(s.monthly)+'/mese da pianificare':'';
+      return '<article class="goal-card clean-goal-card">'+
+        '<div class="clean-goal-top"><small>PRIORITÀ '+priority+'</small>'+
+          '<button class="clean-goal-edit" data-goal="'+g.id+'" type="button" aria-label="Modifica '+esc(g.name)+'">Modifica</button></div>'+
+        '<h3>'+esc(g.name)+'</h3>'+
+        '<div class="clean-goal-values"><strong>'+money(s.current)+'</strong><span>su '+money(s.target)+'</span></div>'+
+        '<div class="progress green" role="progressbar" aria-valuenow="'+Math.round(s.pct)+'" aria-valuemin="0" aria-valuemax="100" aria-label="Completamento '+esc(g.name)+'">'+
+          '<i style="width:'+clamp(s.pct,0,100)+'%"></i></div>'+
+        '<div class="clean-goal-bottom"><span>'+Math.round(s.pct)+'% completato</span><span>'+money(s.remaining)+' mancanti</span></div>'+
+        '<p class="clean-goal-deadline">'+esc(deadline+required)+'</p>'+
+        '<button class="clean-goal-action" data-contribute="'+g.id+'" type="button">Accantona <span aria-hidden="true">›</span></button>'+
+        '</article>';
+    }).join(''):'<div class="clean-empty-goals"><strong>Nessun obiettivo attivo.</strong>'+
+      '<p>Crea il primo obiettivo per pianificare un accantonamento.</p>'+
+      '<button type="button" class="secondary-button" data-new-goal>Crea un obiettivo</button></div>';
+  }
 
   function openSheet(title,html){$('#sheetTitle').textContent=title;$('#sheetBody').innerHTML=html;$('#sheetBackdrop').classList.add('open');$('#sheet').classList.add('open');$('#sheet').setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}
   function closeSheet(){$('#sheetBackdrop').classList.remove('open');$('#sheet').classList.remove('open');$('#sheet').setAttribute('aria-hidden','true');document.body.style.overflow=''}
