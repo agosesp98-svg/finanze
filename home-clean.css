@@ -1,0 +1,63 @@
+/* Finanze Home, one-screen decision hierarchy.
+   Priority: spendable cash -> unpaid obligations -> payday action -> accounts. */
+#view-today{min-width:0}
+#view-today .home-page-head{padding:10px 2px 20px}
+#view-today .home-page-head h1{font-size:40px;line-height:1.02;font-weight:760;letter-spacing:-.05em}
+#view-today .status-banner.show{margin-bottom:14px}
+#view-today .spend-card{min-height:184px;padding:23px 24px;border-radius:27px;box-shadow:0 13px 32px rgba(10,15,24,.14),inset 0 1px 0 rgba(255,255,255,.13)}
+#view-today .spend-card:after{display:none}
+#view-today .spend-card strong{font-size:clamp(41px,12vw,52px);line-height:1;letter-spacing:-.055em}
+#view-today .spend-meta{margin-top:30px;align-items:end;font-size:13px;line-height:1.35}
+#view-today .home-due{margin-top:22px}
+#view-today .home-section-title{margin:0 2px 10px;align-items:center;gap:12px}
+#view-today .home-section-title h2{margin:0;font-size:19px;font-weight:740;letter-spacing:-.03em;line-height:1.25}
+#view-today .home-section-title p{font-size:12px;color:var(--secondary);line-height:1.4;margin:3px 0 0;font-weight:480}
+#view-today .home-section-title button{flex:0 0 auto;min-height:42px;font-size:12px;line-height:1.25;white-space:nowrap;color:var(--blue);font-weight:700}
+#view-today .home-due-list{background:var(--surface);border-radius:18px;border:1px solid var(--separator);box-shadow:none;overflow:hidden;backdrop-filter:none;-webkit-backdrop-filter:none}
+#view-today .home-due-row{min-height:63px;padding:12px 14px;gap:11px}
+#view-today .home-due-row .row-copy{flex:1;min-width:0}
+#view-today .home-due-row .row-copy b{display:block;font-size:14px;font-weight:670;letter-spacing:-.012em;line-height:1.3;overflow-wrap:anywhere}
+#view-today .home-due-row .row-copy span{display:block;font-size:11px;margin-top:3px;line-height:1.3;color:var(--secondary)}
+#view-today .home-due-amount{font-size:14px;font-weight:740;text-align:right;white-space:nowrap;flex:none;letter-spacing:-.02em}
+#view-today .home-due-row .chevron{font-size:17px;margin:0;flex:none}
+#view-today .home-due-foot{font-size:11px;line-height:1.45;color:var(--secondary);margin:7px 2px 0}
+#view-today .home-due-foot[hidden]{display:none}
+#view-today .home-empty{padding:16px;font-size:13px;line-height:1.5;color:var(--secondary)}
+/* An action, not an always-expanded financial form. */
+#view-today .home-salary{display:block;min-width:0;box-sizing:border-box;margin:17px 0 0;padding:0;overflow:hidden;border-radius:18px;border:1px solid var(--separator);background:var(--surface);box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+#view-today .home-salary>summary{display:flex;align-items:center;gap:12px;list-style:none;cursor:pointer;min-height:76px;padding:14px 16px;margin:0;box-sizing:border-box;user-select:none;-webkit-user-select:none}
+#view-today .home-salary>summary::-webkit-details-marker{display:none}
+#view-today .home-salary>summary::marker{content:''}
+#view-today .home-salary-symbol{display:grid;place-items:center;flex:0 0 36px;width:36px;height:36px;border-radius:12px;font-size:20px;font-weight:650;line-height:1;color:var(--blue);background:var(--blue-soft)}
+#view-today .home-salary-label{display:flex;flex-direction:column;justify-content:center;gap:4px;flex:1;min-width:0}
+#view-today .home-salary-label strong{font-size:14px;color:var(--text);font-weight:730;letter-spacing:-.018em;line-height:1.3}
+#view-today .home-salary-label small{font-size:11px;line-height:1.35;color:var(--secondary);font-weight:500;overflow-wrap:anywhere}
+#view-today .home-salary-chevron{flex:0 0 8px;width:8px;height:8px;border-right:1.7px solid var(--secondary);border-bottom:1.7px solid var(--secondary);transform:rotate(45deg);margin-right:6px;transition:transform .18s ease}
+#view-today .home-salary[open] .home-salary-chevron{transform:rotate(225deg)}
+#view-today .home-salary-content{padding:0 16px 17px;border-top:1px solid var(--separator)}
+#view-today .home-salary-content>.salary-guide-intro{font-size:12px;line-height:1.55;color:var(--secondary);margin:14px 0 16px}
+#view-today .home-salary-content .salary-guide-form{gap:12px}
+#view-today .home-salary-content .salary-guide-form label{font-size:12px}
+#view-today .home-salary-content .salary-guide-form button{font-size:13px;padding:12px 10px;line-height:1.35}
+#view-today .home-salary:focus-within{border-color:color-mix(in srgb,var(--blue) 55%,var(--separator))}
+#view-today .home-salary>summary:focus-visible{outline:2px solid var(--blue);outline-offset:-3px;border-radius:18px}
+#view-today .home-accounts{margin-top:24px}
+#view-today .home-accounts .home-section-title{margin-bottom:9px}
+#view-today .account-scroll{gap:9px;padding:0 1px 6px}
+#view-today .account-card{min-width:150px;max-width:210px;min-height:82px;padding:14px 14px 13px;border:1px solid var(--separator);border-radius:17px;background:var(--surface);box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+#view-today .account-card.protected{min-width:150px;background:var(--surface)}
+#view-today .account-card small{font-size:11px;line-height:1.35;margin:0;color:var(--secondary);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view-today .account-card strong{display:block;font-size:21px;line-height:1.25;margin:8px 0 0;font-weight:735;letter-spacing:-.035em;white-space:nowrap}
+#view-today .account-card:active{transform:scale(.985)}
+@media(max-width:380px){
+ #view-today .home-page-head{padding-bottom:17px}
+ #view-today .spend-card{padding:21px 20px;min-height:176px}
+ #view-today .spend-meta{font-size:12px;gap:8px}
+ #view-today .home-salary>summary{padding:12px;gap:10px}
+ #view-today .home-salary-content{padding-inline:12px}
+ #view-today .account-card{min-width:137px;padding:12px}
+ #view-today .account-card strong{font-size:19px}
+}
+@media(prefers-reduced-motion:reduce){
+ #view-today .home-salary-chevron{transition:none}
+}
