@@ -22,6 +22,8 @@ assert.match(js,/localStorage\.setItem\(DRAFT_KEY/,'draft must survive a reload'
 assert.match(js,/AbortController/,'user must be able to stop requests');
 assert.match(js,/navigator\.clipboard\.writeText/,'responses should support copying');
 assert.match(js,/document\.createTextNode/,'assistant answers must use safe DOM formatting');
-assert.match(html,/ai-chat\.js\?v=20261109b/);
-assert.match(sw,/const V='20261109b'/);
+const deployedVersion=html.match(/<meta name="finanze-version" content="([^"]+)"/)?.[1];
+assert.ok(deployedVersion,'the HTML must expose the deployed build version');
+assert.ok(html.includes('ai-chat.js?v='+deployedVersion),'AI UI asset version must match the page');
+assert.ok(sw.includes("const V='"+deployedVersion+"'"),'Service Worker version must match the page');
 console.log('Finanze AI UI/UX integration tests: OK');
