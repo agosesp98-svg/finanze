@@ -27,7 +27,10 @@ async function upgrade(){
   const html=await response.text();
   const found=html.match(/<meta\s+name="finanze-version"\s+content="([^"]+)"/);
   if(!found)throw Error('Non riesco a verificare la versione pubblicata: il sito potrebbe essere ancora in fase di aggiornamento.');
-  message('Versione pubblicata: '+found[1]+'. Aggiornamento in corso…');
+  if(found[1]!==VERSION){
+   throw Error('Versione pubblicata: '+found[1]+'. Versione attesa: '+VERSION+'. La pubblicazione non è ancora allineata: riprova più tardi senza cancellare alcun dato.');
+  }
+  message('Versione '+found[1]+' verificata. Aggiornamento in corso…');
   // Remove ONLY Cache Storage files used for the app shell.
   // Never touch IndexedDB, localStorage or the user's financial records.
   const registration=await navigator.serviceWorker?.getRegistration();
