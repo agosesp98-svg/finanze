@@ -135,3 +135,5 @@
  .projection-cycle{font-size:10px}
  .projection-row strong{font-size:16px}
 }
+
+.projection-intro{margin:-2px 2px 12px;color:var(--secondary);font-size:12px;line-height:1.5}
