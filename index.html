@@ -98,6 +98,11 @@
         <section id="loanManagement" aria-labelledby="loanManagementTitle">
           <div class="section-title loan-section-heading"><h2 id="loanManagementTitle" tabindex="-1">Rate e finanziamenti</h2><span class="loan-heading-meta" id="loanCount">Scadenze e rate</span></div>
           <div id="liabilityList" class="list-card"></div>
+          <details id="excludedLoansDetails" class="excluded-loans" hidden>
+            <summary id="excludedLoansSummary">Finanziamenti esclusi</summary>
+            <p>Questi piani risultano completati o archiviati. Puoi aprirli e correggerne lo stato, le rate e le scadenze.</p>
+            <div id="excludedLoanList" class="list-card"></div>
+          </details>
         </section>
         <div id="incomeList" class="plan-expected-incomes" hidden></div>
 
