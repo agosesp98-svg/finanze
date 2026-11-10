@@ -16,11 +16,11 @@
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
   <link rel="stylesheet" href="./app.css?v=20261110f">
-  <link rel="stylesheet" href="./ai-chat.css?v=20261110f">
   <link rel="stylesheet" href="./plan-update.css?v=20261110f">
   <link rel="stylesheet" href="./salary-guide.css?v=20261110f">
   <link rel="stylesheet" href="./ui-polish.css?v=20261110f">
   <link rel="stylesheet" href="./home-clean.css?v=20261110f">
+  <link rel="stylesheet" href="./pages-clean.css?v=20261110f">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -82,123 +82,92 @@
         </section>
       </section>
 
-      <section id="view-movements" class="view">
-        <div class="page-head"><div><h1>Movimenti</h1><p>Dove sono andati i soldi.</p></div></div>
-        <div id="movementFilters" class="segmented" role="tablist" aria-label="Filtra movimenti">
-          <button class="active" type="button" data-filter="all">Tutti</button><button type="button" data-filter="expense">Uscite</button><button type="button" data-filter="income">Entrate</button><button type="button" data-filter="unclassified">Da sistemare</button>
+      <section id="view-movements" class="view" aria-labelledby="movementsTitle">
+        <div class="page-head clear-page-head">
+          <div><h1 id="movementsTitle">Movimenti</h1><p>Entrate e uscite, senza complicazioni.</p></div>
+          <button type="button" class="page-add-action" data-open-expense>+ Aggiungi</button>
         </div>
-        <div id="unclassifiedNotice" class="notice" hidden></div>
-        <div id="movementList" class="list-card"></div>
+        <div class="movement-overview" aria-label="Riepilogo ciclo stipendio">
+          <div class="movement-overview-item"><small>Uscite del ciclo</small><strong id="movementCycleExpenses">—</strong></div>
+          <div class="movement-overview-item"><small>Entrate del ciclo</small><strong id="movementCycleIncomes">—</strong></div>
+        </div>
+        <div class="movement-tools">
+          <div class="movement-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.2"/><path d="m16 16 4.2 4.2"/></svg>
+            <input type="search" id="movementSearch" placeholder="Cerca un movimento" aria-label="Cerca per nome, categoria o conto" autocomplete="off">
+          </div>
+          <div id="movementFilters" class="segmented movement-filters" role="group" aria-label="Tipo di movimento">
+            <button class="active" type="button" data-filter="all">Tutti</button>
+            <button type="button" data-filter="expense">Uscite</button>
+            <button type="button" data-filter="income">Entrate</button>
+          </div>
+        </div>
+        <div id="unclassifiedNotice" class="notice movement-notice" hidden></div>
+        <div id="movementResultsCount" class="movement-results-count" aria-live="polite"></div>
+        <div id="movementList" class="list-card movement-list"></div>
+        <button id="movementLoadMore" class="movement-load-more" type="button" hidden>Mostra altri movimenti</button>
       </section>
 
-      <section id="view-plan" class="view">
-        <div class="page-head"><div><h1>Piano</h1><p>Come viene distribuito il tuo denaro.</p></div></div>
-        <div id="planSummary" class="plan-summary"></div>
-        <button class="loan-shortcut plan-loan-shortcut" type="button" data-jump-loans aria-label="Vai a Rate e finanziamenti">
-          <span class="loan-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/></svg></span>
-          <span class="loan-shortcut-copy"><strong>Vai a Rate e finanziamenti</strong><small>Modifica scadenze, rate e pagamenti finali</small></span>
-          <span class="loan-shortcut-chevron" aria-hidden="true">›</span>
-        </button>
-        <div id="planStrategy" class="plan-priority" hidden></div>
-
-        <div class="section-title"><h2>Budget</h2><button type="button" data-new-budget>Nuovo</button></div>
-        <div id="budgetList" class="list-card"></div>
-
-        <div class="section-title"><h2>Uscite programmate</h2><button type="button" data-new-commitment>Nuova</button></div>
-        <div id="scheduledList" class="list-card"></div>
-
-        <section id="loanManagement" aria-labelledby="loanManagementTitle">
-          <div class="section-title loan-section-heading"><h2 id="loanManagementTitle" tabindex="-1">Rate e finanziamenti</h2><span class="loan-heading-meta" id="loanCount">Scadenze e rate</span></div>
+      <section id="view-plan" class="view" aria-labelledby="planTitle">
+        <div class="page-head clear-page-head"><div><h1 id="planTitle">Piano</h1><p>Scadenze, rate e budget del tuo ciclo.</p></div></div>
+        <section class="plan-overview" aria-label="Riepilogo ciclo stipendio">
+          <div id="planSummary" class="plan-summary"></div>
+          <div class="plan-quick-links">
+            <button type="button" data-jump-loans>Gestisci finanziamenti <span aria-hidden="true">›</span></button>
+            <button type="button" data-plan-jump="scheduledSection">Uscite programmate <span aria-hidden="true">›</span></button>
+          </div>
+        </section>
+        <section id="forecastSection" class="plan-section" aria-labelledby="forecastSectionTitle">
+          <div class="section-title clean-section-title"><div><h2 id="forecastSectionTitle">Prossimi cicli</h2><p>Dal 10 al 9 del mese seguente, se l'accredito è il 10</p></div><span>6 mesi</span></div>
+          <div id="projectionList" class="projection"></div>
+        </section>
+        <section id="loanManagement" class="plan-section" aria-labelledby="loanManagementTitle">
+          <div class="section-title clean-section-title loan-section-heading"><h2 id="loanManagementTitle" tabindex="-1">Rate e finanziamenti</h2><span class="loan-heading-meta" id="loanCount">Scadenze e rate</span></div>
           <div id="liabilityList" class="list-card"></div>
           <details id="excludedLoansDetails" class="excluded-loans" hidden>
             <summary id="excludedLoansSummary">Finanziamenti esclusi</summary>
-            <p>Questi piani risultano completati o archiviati. Puoi aprirli e correggerne lo stato, le rate e le scadenze.</p>
+            <p>Controlla i piani conclusi o archiviati e le relative date.</p>
             <div id="excludedLoanList" class="list-card"></div>
           </details>
         </section>
+        <section id="scheduledSection" class="plan-section" aria-labelledby="scheduledSectionTitle">
+          <div class="section-title clean-section-title"><h2 id="scheduledSectionTitle" tabindex="-1">Uscite programmate</h2><button type="button" data-new-commitment>Nuova</button></div>
+          <div id="scheduledList" class="list-card"></div>
+          <button id="scheduledExpand" type="button" class="section-show-more" hidden>Mostra tutte le scadenze</button>
+        </section>
+        <section id="budgetSection" class="plan-section" aria-labelledby="budgetSectionTitle">
+          <div class="section-title clean-section-title"><h2 id="budgetSectionTitle">Budget</h2><button type="button" data-new-budget>Nuovo</button></div>
+          <div id="budgetList" class="list-card"></div>
+        </section>
         <div id="incomeList" class="plan-expected-incomes" hidden></div>
-
-        <div class="section-title"><h2>Prossimi mesi</h2><span>6 cicli stipendio</span></div>
-        <p class="projection-intro">Ogni mese va dal giorno di stipendio al giorno precedente l'accredito successivo. Tocca il mese per vedere tutte le scadenze.</p>
-        <div id="projectionList" class="projection"></div>
-
-        <div class="section-title"><h2>Storico cicli</h2><span>Ultimi 6</span></div>
-        <div id="historyList" class="list-card"></div>
+        <details class="plan-secondary-details" id="planExtra">
+          <summary>Analisi e storico <span aria-hidden="true">⌄</span></summary>
+          <div id="planStrategy" class="plan-priority" hidden></div>
+          <div class="section-title clean-section-title"><h2>Storico cicli</h2><span>Ultimi 6</span></div>
+          <div id="historyList" class="list-card"></div>
+        </details>
       </section>
 
-      <section id="view-goals" class="view">
-        <div class="page-head"><div><h1>Obiettivi</h1><p id="goalCapacity">Quanto puoi costruire nel tempo.</p></div><button class="text-button" type="button" data-new-goal>Nuovo</button></div>
-        <div id="goalsList"></div>
-      </section>
-      <section id="view-ai" class="view" aria-label="Finanze AI">
-        <header class="ai-header">
-          <div class="ai-identity">
-            <span class="ai-avatar" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 2 2.3 7.7L22 12l-7.7 2.3L12 22l-2.3-7.7L2 12l7.7-2.3L12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
-            <div class="ai-identity-copy"><h1>Finanze AI</h1><p class="ai-identity-status"><span id="aiStatusDot" class="ai-status-dot" aria-hidden="true"></span><span id="aiStatus">Assistente finanziario</span></p></div>
-          </div>
-          <div class="ai-header-actions">
-            <button id="aiNewChatButton" class="ai-tool-button" type="button" title="Nuova chat" aria-label="Nuova chat" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-            <button id="aiConfigButton" class="ai-tool-button" type="button" title="Impostazioni AI" aria-label="Impostazioni AI" aria-expanded="false" aria-controls="aiSetup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M7 12h10M10 17h4"/><circle cx="8" cy="7" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="12" cy="17" r="2" fill="currentColor" stroke="none"/></svg></button>
-          </div>
-        </header>
-
-        <section id="aiSetup" class="ai-panel ai-setup" aria-label="Collegamento AI">
-          <div class="ai-setup-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m12 2 2.3 7.7L22 12l-7.7 2.3L12 22l-2.3-7.7L2 12l7.7-2.3L12 2Z" stroke="currentColor" stroke-width="1.5"/></svg></div>
-          <h2>Il tuo assistente, sempre qui.</h2>
-          <p>Collega il Worker Cloudflare per parlare con Finanze AI. Il collegamento rimane memorizzato su questo dispositivo.</p>
-          <form id="aiSetupForm" class="form">
-            <div class="field"><label for="aiWorkerInput">URL del Worker Cloudflare</label><input id="aiWorkerInput" type="url" inputmode="url" autocomplete="url" placeholder="https://finanze-ai.nome.workers.dev" required></div>
-            <div class="field"><label for="aiTokenInput">Chiave privata di accesso</label><input id="aiTokenInput" type="password" autocomplete="off" minlength="24" placeholder="CHAT_ACCESS_TOKEN" required></div>
-            <button class="primary-button" type="submit">Collega assistente</button>
-          </form>
-          <div id="aiSetupError" class="ai-error" role="alert" hidden><div><span id="aiSetupErrorText"></span></div></div>
-          <div class="ai-setup-footer"><a href="https://github.com/agosesp98-svg/finanze/tree/main/cloudflare-ai" target="_blank" rel="noopener noreferrer">Guida alla configurazione</a><span>La chiave non viene pubblicata su GitHub.</span></div>
+      <section id="view-goals" class="view" aria-labelledby="goalsTitle">
+        <div class="page-head clear-page-head">
+          <div><h1 id="goalsTitle">Obiettivi</h1><p>Metti da parte, un passo alla volta.</p></div>
+          <button class="page-add-action" type="button" data-new-goal>+ Nuovo</button>
+        </div>
+        <section class="goals-overview" aria-label="Riepilogo risparmi">
+          <div><small>Accantonati negli obiettivi</small><strong id="goalTotalSaved">—</strong></div>
+          <div><small>Ancora da accantonare</small><strong id="goalTotalRemaining">—</strong></div>
         </section>
-
-        <section id="aiChatArea" class="ai-chat-layout" hidden aria-label="Chat AI">
-          <div class="ai-context-control">
-            <div class="ai-context-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="3"/><path d="M9 9h6M9 13h6M9 17h3"/></svg></div>
-            <div class="ai-context-copy"><strong>Contesto finanziario</strong><span id="aiContextStatus">Non condiviso</span></div>
-            <label class="ai-switch" aria-label="Condividi il riepilogo finanziario con l'AI"><input id="aiShare" type="checkbox"><span class="ai-switch-track" aria-hidden="true"></span></label>
-          </div>
-          <details class="ai-privacy-details"><summary>Quali dati utilizza l'AI?</summary><p id="aiPrivacyText"></p></details>
-
-          <div class="ai-transcript-wrap">
-            <div id="aiMessages" class="ai-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="Conversazione"></div>
-            <button id="aiScrollBottomButton" class="ai-scroll-bottom" type="button" aria-label="Vai all'ultimo messaggio" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v15m-6-6 6 6 6-6"/></svg></button>
-          </div>
-
-          <div id="aiError" class="ai-error" role="alert" hidden>
-            <div><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 17h.01"/></svg><span id="aiErrorText"></span></div>
-            <button id="aiRetryButton" type="button">Riprova</button>
-          </div>
-
-          <div id="aiSuggestions" class="ai-suggestions" aria-label="Domande suggerite">
-            <button type="button" data-ai-question="Analizza il mio bilancio attuale: quali sono le priorità?" data-ai-requires-context="true"><svg viewBox="0 0 24 24"><path d="M4 17h4l3-5 3 2 6-9"/><path d="M4 21h16"/></svg><span>Analizza il mio bilancio</span></button>
-            <button type="button" data-ai-question="Quali pagamenti ho in scadenza e quanto incidono sulla liquidità?" data-ai-requires-context="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Prossime scadenze</span></button>
-            <button type="button" data-ai-question="Come posso risparmiare di più ogni mese, partendo dalle mie spese ricorrenti?" data-ai-requires-context="true"><svg viewBox="0 0 24 24"><path d="M12 3v18M16 7H9a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H7"/></svg><span>Trova margine di risparmio</span></button>
-            <button type="button" data-ai-question="Aiutami a fare una simulazione per raggiungere i miei obiettivi." data-ai-requires-context="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span>Simula un obiettivo</span></button>
-          </div>
-
-          <div class="ai-composer-zone">
-            <form id="aiChatForm" class="ai-composer">
-              <label for="aiPrompt" class="ai-sr-only">Il tuo messaggio</label>
-              <textarea id="aiPrompt" maxlength="1200" rows="1" placeholder="Scrivi a Finanze AI..." required></textarea>
-              <button id="aiSendButton" type="submit" aria-label="Invia messaggio" title="Invia messaggio" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button>
-              <button id="aiStopButton" type="button" aria-label="Interrompi risposta" title="Interrompi risposta" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" stroke="none"/></svg></button>
-            </form>
-            <div class="ai-composer-meta"><span id="aiComposerHint">Invio con ↵ · A capo con Maiusc + ↵</span><span id="aiCharCount" hidden>0/1200</span></div>
-          </div>
-        </section>
+        <p id="goalCapacity" class="goals-cycle-caption"></p>
+        <div class="section-title clean-section-title goals-heading"><h2>I tuoi obiettivi</h2><span id="goalsCount"></span></div>
+        <div id="goalsList" class="goals-list"></div>
       </section>
-    </main>
+          </main>
 
     <nav class="tabbar" aria-label="Navigazione principale">
       <button class="tab active" type="button" data-view="today" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9Z"/></svg><span>Oggi</span></button>
       <button class="tab" type="button" data-view="movements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Movimenti</span></button>
       <button class="tab" type="button" data-view="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Piano</span></button>
       <button class="tab" type="button" data-view="goals"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span>Obiettivi</span></button>
-      <button class="tab" type="button" data-view="ai"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 6.2L20 11l-6.2 1.8L12 19l-1.8-6.2L4 11l6.2-1.8L12 3Z"/><path d="m19 17 .7 2.3L22 20l-2.3.7L19 23l-.7-2.3L16 20l2.3-.7L19 17Z"/></svg><span>AI</span></button>
     </nav>
   </div>
 
@@ -222,8 +191,6 @@
   <script src="./plan-patch.js?v=20261110f"></script>
   <script src="./plan-update-ui.js?v=20261110f"></script>
   <script src="./salary-guide.js?v=20261110f"></script>
-  <script src="./ai-context.js?v=20261110f"></script>
-  <script src="./ai-chat.js?v=20261110f"></script>
   <script src="./app-updater.js?v=20261110f"></script>
   <script>
     if('serviceWorker' in navigator){
