@@ -40,6 +40,7 @@ jobs:
           node --check goal-priority.js
           node --check plan-update-ui.js
           node --check sw.js
+          node --check app-updater.js
       - name: Run financial regression tests
         run: |
           node tests/engine.test.js
