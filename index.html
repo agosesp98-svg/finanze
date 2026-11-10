@@ -11,14 +11,14 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20261109h">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261110a">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=20261109h">
-  <link rel="stylesheet" href="./ai-chat.css?v=20261109h">
-  <link rel="stylesheet" href="./plan-update.css?v=20261109h">
-  <link rel="stylesheet" href="./salary-guide.css?v=20261109h">
-  <link rel="stylesheet" href="./ui-polish.css?v=20261109h">
+  <link rel="stylesheet" href="./app.css?v=20261110a">
+  <link rel="stylesheet" href="./ai-chat.css?v=20261110a">
+  <link rel="stylesheet" href="./plan-update.css?v=20261110a">
+  <link rel="stylesheet" href="./salary-guide.css?v=20261110a">
+  <link rel="stylesheet" href="./ui-polish.css?v=20261110a">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -101,7 +101,8 @@
         </section>
         <div id="incomeList" class="plan-expected-incomes" hidden></div>
 
-        <div class="section-title"><h2>Prossimi mesi</h2><span>6 mesi</span></div>
+        <div class="section-title"><h2>Prossimi mesi</h2><span>6 cicli stipendio</span></div>
+        <p class="projection-intro">Ogni mese va dal giorno di stipendio al giorno precedente l'accredito successivo. Tocca il mese per vedere tutte le scadenze.</p>
         <div id="projectionList" class="projection"></div>
 
         <div class="section-title"><h2>Storico cicli</h2><span>Ultimi 6</span></div>
@@ -192,20 +193,20 @@
   <input id="planFileInput" type="file" accept="application/json,.json" hidden aria-label="Seleziona il piano privato da importare">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=20261109h"></script>
-  <script src="./engine.js?v=20261109h"></script>
-  <script src="./spendable-guard.js?v=20261109h"></script>
-  <script src="./app.js?v=20261109h"></script>
-  <script src="./appearance.js?v=20261109h"></script>
-  <script src="./insights.js?v=20261109h"></script>
-  <script src="./projection-details.js?v=20261109h"></script>
-  <script src="./recurrence-controls.js?v=20261109h"></script>
-  <script src="./goal-priority.js?v=20261109h"></script>
-  <script src="./plan-patch.js?v=20261109h"></script>
-  <script src="./plan-update-ui.js?v=20261109h"></script>
-  <script src="./salary-guide.js?v=20261109h"></script>
-  <script src="./ai-context.js?v=20261109h"></script>
-  <script src="./ai-chat.js?v=20261109h"></script>
+  <script src="./db.js?v=20261110a"></script>
+  <script src="./engine.js?v=20261110a"></script>
+  <script src="./spendable-guard.js?v=20261110a"></script>
+  <script src="./app.js?v=20261110a"></script>
+  <script src="./appearance.js?v=20261110a"></script>
+  <script src="./insights.js?v=20261110a"></script>
+  <script src="./projection-details.js?v=20261110a"></script>
+  <script src="./recurrence-controls.js?v=20261110a"></script>
+  <script src="./goal-priority.js?v=20261110a"></script>
+  <script src="./plan-patch.js?v=20261110a"></script>
+  <script src="./plan-update-ui.js?v=20261110a"></script>
+  <script src="./salary-guide.js?v=20261110a"></script>
+  <script src="./ai-context.js?v=20261110a"></script>
+  <script src="./ai-chat.js?v=20261110a"></script>
   <script>
     if('serviceWorker' in navigator){
       let refreshing=false;
