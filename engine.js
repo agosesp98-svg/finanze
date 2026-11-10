@@ -201,6 +201,8 @@ const FinanceEngine=(()=>{
     const toItem=x=>({id:x.id??x.sourceCommitmentId??x.liabilityId,name:x.name,
       amount:Number(x.amount||0),date:x.dueDate,accountId:x.accountId,
       projected:!!x.projected,estimated:!!x.estimated,
+      liabilityId:x.liabilityId??x.sourceLiabilityId??null,liabilityKey:x.liabilityKey??null,
+      sourceCommitmentId:x.sourceCommitmentId??null,
       fundedByGoal:!!x.fundedByGoal,balloon:!!x.balloon,
       kind:x.liabilityId||x.liabilityKey?'liability':(x.recurring===true||isRecurringCadence(x.cadence)?'recurring':'oneoff')});
     const classified=pending.map(toItem);
@@ -230,6 +232,53 @@ const FinanceEngine=(()=>{
       oneOffItems,oneOffTotal,overdueItems,overdueTotal,excludedGoalTotal,
       fixedTotal,plannedOutflow,capacity,goal,goalNeed,
       gap:goalNeed?Math.max(0,goalNeed-capacity):0};
+  }
+
+  // Read-only explanation of all loans that are (or are not) in a payday cycle.
+  // No liability is reactivated and no payment is created by this audit.
+  function loanCycleAudit(snapshot,key,now=new Date()){
+    const {liabilities=[],commitments=[],settings=[]}=snapshot;
+    const breakdown=monthBreakdown(snapshot,key,now);
+    const {start,end}=salaryCycleBounds(key,settings);
+    const matches=(record,l)=>Number(record.liabilityId||record.sourceLiabilityId)===Number(l.id)
+      ||!!(l.scheduleKey&&record.liabilityKey===l.scheduleKey);
+    const current=new Date(now);
+    return liabilities.map(l=>{
+      const related=commitments.filter(c=>matches(c,l));
+      const unpaid=breakdown.rateItems.filter(x=>matches(x,l));
+      const overdue=breakdown.overdueItems.filter(x=>matches(x,l));
+      const inCycle=related.filter(c=>c.dueDate>=start&&c.dueDate<end);
+      const paid=inCycle.filter(c=>c.paidDate||c.active===false&&!c.archived);
+      const next=l.nextDueDate||l.firstDueDate||'';
+      const final=l.finalPaymentDate||'';
+      const open=unpaid.length+overdue.length>0;
+      let reason='Nessuna scadenza generata nel ciclo: controlla il piano';
+      let code='missing';
+      if(open){reason='Rata compresa nel ciclo';code='included'}
+      else if(l.archived){reason='Finanziamento archiviato';code='archived'}
+      else if(l.completed){reason='Finanziamento segnato come completato';code='completed'}
+      else if(paid.length){reason='Scadenza del ciclo segnata come pagata o disattivata';code='paid'}
+      else if(l.monthlyPhaseComplete||Number(l.monthly||0)<=0){
+        reason=final&&final>=start&&final<end?'Pagamento finale da verificare':'Rate ordinarie disattivate';
+        code='phase';
+      }
+      else if(!next){reason='Manca la data della prossima rata';code='no-date'}
+      else if((l.recurrenceEnd||l.finalDueDate||'')&&(l.recurrenceEnd||l.finalDueDate)<start){
+        reason='Fine rate registrata prima del ciclo';code='ended';
+      }
+      else if(next>=end){reason='Prossima rata dopo la fine del ciclo';code='later'}
+      else if(next<start){reason='Scadenza precedente al ciclo; verificare il calendario';code='stale'}
+      const suspected=(!open&&code!=='later'&&code!=='paid'&&code!=='ended')||
+        (open&&Number(l.installmentsRemaining)===0&&l.installmentsRemaining!=null);
+      return{id:l.id,name:l.name||'Finanziamento senza nome',code,reason,open,
+        archived:!!l.archived,completed:!!l.completed,monthly:Number(l.monthly||0),
+        nextDueDate:next,finalDueDate:l.recurrenceEnd||l.finalDueDate||'',
+        finalPaymentDate:final,linkedCount:related.length,paidCount:paid.length,
+        due:unpaid.map(x=>({date:x.date,amount:x.amount,projected:x.projected})),
+        overdue:overdue.map(x=>({date:x.date,amount:x.amount})),
+        suspected,hasPreviousHistory:related.length>0};
+    }).sort((a,b)=>Number(b.open)-Number(a.open)||
+      Number(b.suspected)-Number(a.suspected)||String(a.name).localeCompare(String(b.name),'it'));
   }
 
   function commitmentAccountId(c,liabilities,primary){
@@ -317,7 +366,10 @@ const FinanceEngine=(()=>{
     const {liabilities=[],commitments=[]}=snapshot;let changed=false;
     for(const original of liabilities.filter(x=>!x.archived)){
       const l={...original},linked=commitments.filter(c=>Number(c.liabilityId)===Number(l.id)||(l.scheduleKey&&c.liabilityKey===l.scheduleKey)),noBalloon=!Number(l.finalPayment||0),finishedByCount=l.installmentsRemaining!=null&&Number(l.installmentsRemaining)<=0,finishedByResidual=l.remaining!=null&&Number(l.remaining)<=0;
-      if(!l.completed&&noBalloon&&(finishedByCount||finishedByResidual)){l.completed=true;l.monthly=0;l.nextDueDate='';await db.put('liabilities',l);changed=true}
+      // Never auto-complete a loan while its next due date or an unpaid installment exists.
+      // A stale zero residual/count alone is not proof that the final bill was paid.
+      const openCommitment=linked.some(c=>!c.archived&&c.active!==false&&!c.paidDate);
+      if(!l.completed&&noBalloon&&(finishedByCount||finishedByResidual)&&!l.nextDueDate&&!openCommitment){l.completed=true;l.monthly=0;await db.put('liabilities',l);changed=true}
       if(l.completed){for(const c of linked.filter(c=>c.active!==false)){await db.put('commitments',{...c,active:false,note:[c.note,'Piano completato'].filter(Boolean).join(' · ')});changed=true}continue}
       if(l.recurrenceEnd&&l.nextDueDate&&String(l.nextDueDate)>String(l.recurrenceEnd)&&Number(l.finalPayment||0)>0){l.regularMonthly=l.regularMonthly??l.monthly;l.monthly=0;l.monthlyPhaseComplete=true;l.nextDueDate=l.finalPaymentDate||'';await db.put('liabilities',l);changed=true}
       const cutoff=l.recurrenceEnd||l.finalDueDate||'';
@@ -330,6 +382,6 @@ const FinanceEngine=(()=>{
     return{changed};
   }
 
-  return{norm,iso,parse,calculate,scheduledCommitments,liabilityAmountForMonth,salaryDate,cycleStart,salaryCycleBounds,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
+  return{norm,iso,parse,calculate,scheduledCommitments,loanCycleAudit,liabilityAmountForMonth,salaryDate,cycleStart,salaryCycleBounds,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceEngine;
