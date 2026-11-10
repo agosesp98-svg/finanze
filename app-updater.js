@@ -8,7 +8,7 @@ const message=msg=>{const el=status();if(el)el.textContent=msg};
 let running=false;
 function showVersion(){
  const el=label();
- if(el)el.textContent=VERSION;
+ if(el&&el.textContent!==VERSION)el.textContent=VERSION;
 }
 async function upgrade(){
  if(running)return;
