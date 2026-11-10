@@ -161,3 +161,14 @@
 .app-version-panel .helper strong{color:var(--text);font-weight:750;font-variant-numeric:tabular-nums}
 .app-version-panel [data-check-updates]{display:block;width:100%;min-height:48px;margin:5px 0 10px}
 #finanzeUpdateStatus:not(:empty){margin:10px 0 12px;padding:10px 12px;border-radius:11px;background:var(--blue-soft);color:var(--blue);font-size:12px;font-weight:650;overflow-wrap:anywhere}
+
+
+/* Quiet update visibility on Home: always above the fold on phones. */
+.home-update-status{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:9px 12px;margin:0 0 12px;border:1px solid var(--separator);border-radius:14px;background:var(--surface);min-width:0}
+.home-update-copy{font-size:11px;font-weight:560;color:var(--secondary);line-height:1.4;min-width:0}
+.home-update-copy strong{font-variant-numeric:tabular-nums;color:var(--text);font-weight:730}
+.home-update-button{flex:0 1 auto;min-height:35px;border:0;border-radius:10px;padding:7px 10px;background:var(--surface-3);color:var(--blue);font-size:12px;font-weight:710;line-height:1.25;white-space:normal;text-align:center}
+.home-update-button:disabled{opacity:.55}
+#finanzeHomeUpdateStatus{flex-basis:100%;margin:0;font-size:12px;line-height:1.45;color:var(--secondary)}
+#finanzeHomeUpdateStatus:empty{display:none}
+@media(max-width:360px){.home-update-status{padding:8px;gap:6px}.home-update-button{font-size:11px;padding-inline:7px}}
