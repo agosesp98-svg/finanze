@@ -120,6 +120,10 @@ async function render(){
  const salary=Number(setting(s.settings,'salaryNet',0));
  const incomes=s.movements.filter(x=>x.type==='income'&&x.salaryGuide===true).sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id));
  const newest=incomes[0];
+ const summaryMeta=$('salaryGuideSummaryMeta');
+ if(summaryMeta)summaryMeta.textContent=newest
+   ?'Ultimo accredito '+duePretty(newest.date)+' · '+money(newest.amount)
+   :'Registra l’accredito e prepara il piano';
  const select=(id,list,preferred)=>{const el=$(id),old=el.value;el.replaceChildren();for(const a of list){const option=document.createElement('option');option.value=String(a.id);option.textContent=a.name;el.appendChild(option)}if(list.some(a=>String(a.id)===old))el.value=old;else if(preferred&&list.some(a=>String(a.id)===String(preferred)))el.value=String(preferred)};
  select('salaryGuideAccount',accounts,setting(s.settings,'primaryAccountId',accounts[0]?.id));
  const daily=accounts.find(x=>/postepay|poste pay|prepagat/i.test(x.name+' '+(x.kind||'')));
@@ -162,6 +166,11 @@ async function submit(e){
 }
 document.addEventListener('DOMContentLoaded',()=>{
  const host=$('salaryGuide');if(!host)return;
+ // Closed by default; remember expansion within the active browsing session.
+ try{if(sessionStorage.getItem('finanze.salaryGuide.open')==='1')host.open=true}catch{}
+ host.addEventListener('toggle',()=>{
+  try{sessionStorage.setItem('finanze.salaryGuide.open',host.open?'1':'0')}catch{}
+ });
  $('salaryGuideForm').addEventListener('submit',submit);
  $('salaryGuideSpend').addEventListener('change',async()=>{
   const s=await snapshot();const income=s.movements.filter(m=>m.salaryGuide===true&&m.type==='income').sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id))[0];
