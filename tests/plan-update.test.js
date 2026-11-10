@@ -58,12 +58,16 @@ assert.throws(()=>Plan.validate({...plan,accounts:[{name:'Bad',balance:-2}]}),/I
 assert.throws(()=>Plan.validate({...plan,expectedIncomes:[{name:'Dated',amount:100,expectedDate:'2026-12-03'}]}),/senza data/);
 
 const snapshot={...stores,movements:previous.movements};
-cents(E.monthBreakdown(snapshot,'2026-11').rateTotal,100);
-cents(E.monthBreakdown(snapshot,'2026-12').rateTotal,117.29,'final one-time payment present only in its due month');
+// The month label is a payday cycle, not a calendar month: 10th to 9th.
+cents(E.monthBreakdown(snapshot,'2026-11').rateTotal,117.29,
+  'the installment due December 1 belongs to November payday cycle');
+cents(E.monthBreakdown(snapshot,'2026-12').rateTotal,180,
+  'January 1 payment belongs to December payday cycle');
 cents(E.monthBreakdown(snapshot,'2027-01').rateTotal,180);
-cents(E.monthBreakdown(snapshot,'2029-10').rateTotal,80);
+cents(E.monthBreakdown(snapshot,'2029-10').rateTotal,16.12);
 cents(E.monthBreakdown(snapshot,'2029-11').rateTotal,16.12);
-cents(E.monthBreakdown(snapshot,'2029-12').rateTotal,16.12);
+cents(E.monthBreakdown(snapshot,'2029-12').rateTotal,0,
+  'last December 1 installment is already covered by November payday');
 cents(E.monthBreakdown(snapshot,'2030-01').rateTotal,0,'no ghost installments after final date');
 assert.equal(E.scheduledCommitments(snapshot.commitments,new Date(2026,10,9,12),4,snapshot.liabilities)
   .filter(x=>x.name==='Ending payment'&&x.dueDate==='2027-01-01').length,0,'one-time payment must stop at end date');
