@@ -289,6 +289,34 @@ async function main(){
     cents(b.rateTotal,0,'non vengono riattivati debiti senza conferma');
   }
 
+  {
+    // Identical display names must not collapse two independent loan schedules.
+    const on=new Date(2026,10,10,12);
+    const loans=[
+      {id:301,name:'Prestito',monthly:40,nextDueDate:'2026-12-01',
+       firstDueDate:'2026-01-01',recurrenceEnd:'2026-12-01'},
+      {id:302,name:'Prestito',monthly:55,nextDueDate:'2026-12-01',
+       firstDueDate:'2026-01-01',recurrenceEnd:'2026-12-01'}
+    ];
+    const b=E.monthBreakdown({settings,budgets:[],goals:[],
+      liabilities:loans,commitments:[]},'2026-11',on);
+    cents(b.rateTotal,95,'due finanziamenti omonimi devono comparire entrambi');
+    assert.deepEqual(b.rateItems.map(x=>x.liabilityId).sort((a,b)=>a-b),[301,302]);
+  }
+
+  {
+    // A registered final installment must not create an additional projection.
+    const on=new Date(2026,10,10,12);
+    const loan={id:301,name:'Prestito finale',monthly:0,
+      monthlyPhaseComplete:true,nextDueDate:'2026-12-01',
+      finalPayment:250,finalPaymentDate:'2026-12-01',completed:false};
+    const c={id:72,name:'Prestito finale',liabilityId:301,amount:250,
+      dueDate:'2026-12-01',active:true,cadence:'Una tantum'};
+    const b=E.monthBreakdown({settings,budgets:[],goals:[],
+      liabilities:[loan],commitments:[c]},'2026-11',on);
+    cents(b.rateTotal,250,'finale gia registrato non deve essere duplicato');
+  }
+
   console.log('Financial engine tests: OK');
 }
 
