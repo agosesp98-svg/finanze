@@ -33,47 +33,52 @@
     </header>
 
     <main>
-      <section id="view-today" class="view active">
-        <div class="page-head"><div><h1>Oggi</h1><p>La situazione che conta adesso.</p></div></div>
+      <section id="view-today" class="view active" aria-labelledby="homeTitle">
+        <div class="page-head home-page-head"><h1 id="homeTitle">Oggi</h1></div>
         <div id="todayStatus" class="status-banner" role="alert"></div>
-        <section class="home-update-status" aria-label="Versione e aggiornamenti">
-          <span class="home-update-copy">Finanze <strong data-finanze-version>20261110e</strong></span>
-          <button type="button" data-check-updates class="home-update-button">Verifica aggiornamenti</button>
-          <p id="finanzeHomeUpdateStatus" role="status" aria-live="polite"></p>
-        </section>
-        <button id="spendCard" class="spend-card" type="button">
+
+        <button id="spendCard" class="spend-card" type="button" aria-label="Apri il dettaglio della disponibilità">
           <div><small id="spendLabel">Puoi spendere</small><strong id="spendValue">€ 0,00</strong></div>
           <div class="spend-meta"><span id="spendDaily">€ 0 / giorno</span><span id="spendDays">—</span></div>
         </button>
-        <section id="monthlyPlan" class="month-card" aria-label="Piano mensile"></section>
-        <button class="loan-shortcut home-loan-shortcut" type="button" data-jump-loans aria-label="Apri Rate e finanziamenti">
-          <span class="loan-shortcut-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18M7 15h3"/></svg></span>
-          <span class="loan-shortcut-copy"><strong>Rate e finanziamenti</strong><small id="homeLoanSummary">Gestisci rate, scadenze e importi</small></span>
-          <span class="loan-shortcut-chevron" aria-hidden="true">›</span>
-        </button>
-        <section id="salaryGuide" class="salary-guide" aria-label="Organizza lo stipendio">
-          <div class="salary-guide-head"><div><small>DOPO L'ACCREDITO</small><h2>Organizza lo stipendio</h2></div><span class="salary-guide-tag">Piano operativo</span></div>
-          <p class="salary-guide-intro">Registra lo stipendio ricevuto. Ti indicherò quanto riservare per addebiti, vita quotidiana e obiettivi, e su quale conto organizzare le spese.</p>
-          <form id="salaryGuideForm" class="salary-guide-form">
-            <label>Stipendio incassato (€)<input id="salaryGuideAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Importo netto" required></label>
-            <label>Conto di accredito<select id="salaryGuideAccount" required></select></label>
-            <label>Conto per le spese quotidiane<select id="salaryGuideSpend" required></select></label>
-            <button id="salaryGuideSubmit" type="submit" class="primary-button">Registra stipendio e prepara il piano</button>
-          </form>
-          <p id="salaryGuideEmpty" class="salary-guide-alert" hidden>Per iniziare, aggiungi un conto spendibile dalle impostazioni.</p>
-          <p id="salaryGuideFeedback" class="salary-guide-feedback" role="status" aria-live="polite"></p>
-          <p id="salaryGuideLast" class="salary-guide-note" hidden></p>
-          <div id="salaryGuideResults" hidden></div>
+
+        <section class="home-due" aria-labelledby="homeDueTitle">
+          <div class="section-title home-section-title">
+            <div><h2 id="homeDueTitle">Da pagare</h2><p id="upcomingCycle">Nel ciclo stipendio corrente</p></div>
+            <button type="button" data-view="plan" aria-label="Apri tutte le uscite programmate">Vedi tutte</button>
+          </div>
+          <div id="upcomingList" class="list-card home-due-list" aria-live="polite"></div>
+          <p class="home-due-foot" id="homeDueFoot" hidden></p>
         </section>
 
-        <div class="section-title"><h2>I tuoi soldi</h2><button type="button" onclick="document.getElementById('settingsBtn').click()">Gestisci</button></div>
-        <div id="accountsStrip" class="account-scroll" aria-label="Conti"></div>
+        <details id="salaryGuide" class="salary-guide home-salary" aria-label="Organizza lo stipendio">
+          <summary class="home-salary-trigger">
+            <span class="home-salary-symbol" aria-hidden="true">€</span>
+            <span class="home-salary-label"><strong>Organizza lo stipendio</strong><small id="salaryGuideSummaryMeta">Registra l’accredito e prepara il piano</small></span>
+            <span class="home-salary-chevron" aria-hidden="true"></span>
+          </summary>
+          <div class="home-salary-content">
+            <p class="salary-guide-intro">Dopo l'accredito, registra lo stipendio: vedrai quanto riservare per le scadenze, quanto tenere per le spese e quanto accantonare.</p>
+            <form id="salaryGuideForm" class="salary-guide-form">
+              <label>Stipendio incassato (€)<input id="salaryGuideAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="Importo netto" required></label>
+              <label>Conto di accredito<select id="salaryGuideAccount" required></select></label>
+              <label>Conto per le spese quotidiane<select id="salaryGuideSpend" required></select></label>
+              <button id="salaryGuideSubmit" type="submit" class="primary-button">Registra stipendio e prepara il piano</button>
+            </form>
+            <p id="salaryGuideEmpty" class="salary-guide-alert" hidden>Per iniziare, aggiungi un conto spendibile dalle impostazioni.</p>
+            <p id="salaryGuideFeedback" class="salary-guide-feedback" role="status" aria-live="polite"></p>
+            <p id="salaryGuideLast" class="salary-guide-note" hidden></p>
+            <div id="salaryGuideResults" hidden></div>
+          </div>
+        </details>
 
-        <div class="section-title"><h2>Prossime uscite</h2><button type="button" data-view="plan">Vedi piano</button></div>
-        <div id="upcomingList" class="list-card"></div>
-
-        <div class="section-title"><h2>Obiettivo prioritario</h2><button type="button" data-view="goals">Tutti</button></div>
-        <div id="primaryGoal"></div>
+        <section class="home-accounts" aria-labelledby="homeAccountsTitle">
+          <div class="section-title home-section-title">
+            <h2 id="homeAccountsTitle">Conti</h2>
+            <button type="button" id="homeManageAccounts" aria-label="Gestisci i conti">Gestisci</button>
+          </div>
+          <div id="accountsStrip" class="account-scroll" aria-label="Saldi dei conti"></div>
+        </section>
       </section>
 
       <section id="view-movements" class="view">
