@@ -5,7 +5,7 @@
 
   function isRecurring(item){
     const cadence=norm(item?.cadence);
-    return item?.recurring===true||cadence.includes('mensil')||cadence.includes('14 giorni')||cadence.includes('settiman');
+    return item?.recurring===true||cadence.includes('mensil')||cadence.includes('21 giorni')||cadence.includes('14 giorni')||cadence.includes('settiman');
   }
 
   async function currentItem(){
@@ -34,7 +34,10 @@
     if(!confirm('Terminare questa ricorrenza? Le spese già registrate resteranno nello storico.'))return;
     const commitments=await FinanceDB.getAll('commitments'),key=norm(item.name);
     const matches=commitments.filter(c=>!c.liabilityId&&!c.liabilityKey&&norm(c.name)===key&&isRecurring(c));
-    for(const c of matches)await FinanceDB.remove('commitments',c.id);
+    // Keep paid installment records for audit; only retire the recurrence.
+    for(const c of matches)await FinanceDB.put('commitments',{
+      ...c,recurring:false,archived:true,active:false,cadence:'Una tantum'
+    });
     const close=$('[data-close-sheet]');if(close)close.click();
     setTimeout(()=>location.reload(),80);
   }
