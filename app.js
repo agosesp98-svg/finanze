@@ -43,64 +43,76 @@ const FinanceApp=(()=>{
   function render(){renderToday();renderMovements();renderPlan();renderGoals()}
 
   function renderToday(){
-    const now=new Date(),m=model(),banner=$('#todayStatus');
-    banner.className='status-banner';
-    banner.replaceChildren();
-    if(m.blockingShortfall>0){
-      banner.classList.add('show','danger');
-      banner.innerHTML='<span class="status-dot"></span><span><b>Mancano '+money(m.blockingShortfall)+'</b> per coprire le prossime uscite.</span>';
-    }else if(m.spendable===0&&m.due>0){
+    const now=new Date(),availability=FinanceEngine.accountAvailability(state,now);
+    const primary=availability.primary,spending=availability.spending,banner=$('#todayStatus');
+    const warning=availability.accounts.find(a=>a.shortfall>0);
+    banner.className='status-banner';banner.replaceChildren();
+    if(warning){
       banner.classList.add('show','warning');
-      banner.innerHTML='<span class="status-dot"></span><span>Le prossime uscite assorbono il margine disponibile.</span>';
+      banner.innerHTML='<span class="status-dot"></span><span>Su <b>'+esc(warning.name)+'</b> mancano '+
+        money(warning.shortfall)+' per coprire addebiti e budget assegnati.</span>';
     }
-    $('#spendCard').classList.toggle('danger',m.blockingShortfall>0);
-    $('#spendLabel').textContent='Puoi spendere fino al '+parse(m.salary).getDate();
-    $('#spendValue').textContent=money(m.spendable);
-    $('#spendDaily').textContent=money(m.daily)+' / giorno';
-    $('#spendDays').textContent=m.days+' '+(m.days===1?'giorno':'giorni')+' rimasti';
+    const accountName=primary?.name||'conto principale';
+    $('#spendCard').classList.toggle('danger',!!(primary&&primary.shortfall>0));
+    $('#spendLabel').textContent=primary?'Non impegnati su '+accountName:'Nessun conto principale';
+    $('#spendValue').textContent=money(primary?.free||0);
+    $('#spendDaily').textContent='Saldo '+money(primary?.balance||0);
+    $('#spendDays').textContent='Da riservare '+money((primary?.reservedDue||0)+(primary?.budgetReserved||0));
+    const spendNote=$('#homeSpendingNote');
+    $('#homeSpendingValue').textContent=money(availability.spendingAvailable);
+    spendNote.textContent=spending
+      ?spending.name+' · '+money(availability.totalBudget)+' previsti nei budget'+
+        (availability.spendingAccountInferred?' · conto attribuito automaticamente':'')
+      :'Aggiungi un conto per gestire il budget quotidiano';
 
-    // Use the same 10-to-10 salary-cycle data as the detailed Plan.
     const currentCycle=FinanceEngine.cycleStart(state.settings,now).slice(0,7);
     const breakdown=FinanceEngine.monthBreakdown(state,currentCycle,now);
     const cycleLast=parse(breakdown.cycleEnd);
     cycleLast.setDate(cycleLast.getDate()-1);
-    $('#upcomingCycle').textContent=dueLabel(breakdown.cycleStart)+' – '+dueLabel(FinanceEngine.iso(cycleLast));
-    const dues=[...breakdown.overdueItems,...breakdown.rateItems,
-      ...breakdown.recurringItems,...breakdown.oneOffItems]
-      .sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+    $('#upcomingCycle').textContent=dueLabel(breakdown.cycleStart)+' – '+
+      dueLabel(FinanceEngine.iso(cycleLast));
+    const dues=availability.obligations.slice()
+      .sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate)));
     const dueRows=dues.slice(0,3).map(x=>{
       const projected=!!x.projected;
       const loan=!!(x.liabilityId||x.liabilityKey);
-      const action=loan
+      const action=loan&&x.liabilityId
         ?'data-liability="'+esc(x.liabilityId)+'"'
         :projected&&x.sourceCommitmentId
-          ?'data-forecast-commitment="'+esc(x.sourceCommitmentId)+'" data-forecast-date="'+esc(x.date)+'"'
+          ?'data-forecast-commitment="'+esc(x.sourceCommitmentId)+'" data-forecast-date="'+esc(x.dueDate)+'"'
           :'data-commitment="'+esc(x.id)+'"';
-      const late=String(x.date)<today();
+      const overdue=String(x.dueDate)<today();
+      const account=availability.accounts.find(a=>Number(a.id)===Number(x.accountId));
       return '<button class="list-row home-due-row" type="button" '+action+
-        ' aria-label="'+esc(x.name+', scadenza '+dueLabel(x.date)+', '+money(x.amount))+'">'+
+        ' aria-label="'+esc(x.name+', scadenza '+dueLabel(x.dueDate)+', '+money(x.amount))+'">'+
         '<span class="row-copy"><b>'+esc(x.name)+'</b><span>'+
-        (late?'Scaduta · ':'')+esc(dueLabel(x.date))+
+        (overdue?'Scaduta · ':'')+esc(dueLabel(x.dueDate))+
+        ' · '+esc(account?.name||'Conto da verificare')+
         (projected?' · Prevista':'')+'</span></span>'+
         '<strong class="home-due-amount">'+money(x.amount)+'</strong>'+
         '<span class="chevron" aria-hidden="true">›</span></button>';
     });
     $('#upcomingList').innerHTML=dueRows.length?dueRows.join('')
-      :'<div class="home-empty">Nessuna scadenza non pagata registrata nel ciclo.</div>';
+      :'<div class="home-empty">Nessuna scadenza da pagare prima del prossimo stipendio.</div>';
     const foot=$('#homeDueFoot');
     foot.hidden=!dues.length;
     foot.textContent=dues.length
-      ?dues.length+' '+(dues.length===1?'uscita':'uscite')+' · '+money(dues.reduce((s,x)=>s+Number(x.amount||0),0))+' da coprire'+
+      ?dues.length+' '+(dues.length===1?'scadenza':'scadenze')+' · '+
+        money(availability.totalReserved)+' da riservare'+
         (dues.length>3?' · Mostrate le prime 3':'')
       :'';
 
-    const ordered=[...state.accounts.filter(a=>!a.archived&&!a.protected),
-      ...state.accounts.filter(a=>!a.archived&&a.protected)];
-    $('#accountsStrip').innerHTML=ordered.length?ordered.map(a=>
-      '<button class="account-card '+(a.protected?'protected':'')+'" data-account="'+a.id+
-      '" type="button" aria-label="'+esc(a.name+', saldo '+money(a.balance)+(a.protected?', protetto':''))+'">'+
-      '<small>'+esc(a.name)+(a.protected?' · Protetto':'')+'</small>'+
-      '<strong>'+money(a.balance)+'</strong></button>').join('')
+    $('#accountsStrip').innerHTML=availability.accounts.length?
+      availability.accounts.map(a=>{
+        const extra=a.protected?'Risparmio protetto':a.isSpending
+          ?'Budget '+money(a.budgetReserved)+' · Fuori budget '+money(a.free)
+          :'Libero '+money(a.free);
+        return '<button class="account-card '+(a.protected?'protected':'')+
+          '" data-account="'+esc(a.id)+'" type="button" aria-label="'+
+          esc(a.name+', saldo '+money(a.balance)+', '+extra)+'">'+
+          '<small>'+esc(a.name)+'</small><strong>'+money(a.balance)+'</strong>'+
+          '<small class="account-available-note">'+esc(extra)+'</small></button>';
+      }).join('')
       :'<div class="home-empty">Nessun conto aggiunto. Puoi crearne uno dalle Impostazioni.</div>';
   }
 
