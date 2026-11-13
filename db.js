@@ -193,3 +193,4 @@ const FinanceDB=(()=>{
 
   return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary};
 })();
+if(typeof module!=='undefined'&&module.exports)module.exports=FinanceDB;
