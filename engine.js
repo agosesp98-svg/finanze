@@ -12,11 +12,12 @@ const FinanceEngine=(()=>{
   function salaryDate(settings,now=new Date()){
     const configured=String(setting(settings,'nextSalaryDate','')||'');
     const today=iso(now);
-    if(configured&&configured>=today)return configured;
     const day=clamp(Number(setting(settings,'salaryDay',setting(settings,'salaryLatestDay',10)))||10,1,28);
     let d=new Date(now.getFullYear(),now.getMonth(),day,12);
     if(now.getDate()>day)d=new Date(now.getFullYear(),now.getMonth()+1,day,12);
-    return iso(d);
+    const derived=iso(d);
+    // An early manually-entered date cannot shorten the protected payroll cycle.
+    return configured&&configured>=today&&configured>derived?configured:derived;
   }
 
   function cycleStart(settings,now=new Date()){
@@ -68,7 +69,9 @@ const FinanceEngine=(()=>{
     const identity=c=>c.liabilityId!=null?'loan:'+String(c.liabilityId):
       c.sourceLiabilityId!=null?'loan:'+String(c.sourceLiabilityId):
       c.liabilityKey?'loan-key:'+String(c.liabilityKey):'rec:'+norm(c.name);
-    const seen=new Set(commitments.filter(c=>!c.archived&&c.dueDate)
+    // Paid-in-advance installments remain covered even when their old rows are
+    // archived, otherwise the projection generates the same bill again.
+    const seen=new Set(commitments.filter(c=>c.dueDate)
       .map(c=>identity(c)+'|'+c.dueDate));
     const forecasts=[];
     for(const latest of recurringCommitments(commitments)){
@@ -310,35 +313,102 @@ const FinanceEngine=(()=>{
     });
   }
 
-  function calculate({accounts=[],budgets=[],commitments=[],liabilities=[],goals=[],settings=[]},now=new Date()){
-    const today=iso(now),salary=salaryDate(settings,now);
+  function accountAvailability(snapshot={},now=new Date()){
+    const {accounts=[],budgets=[],commitments=[],liabilities=[],settings=[]}=snapshot;
+    const moneyRound=n=>Math.round((Number(n)||0)*100)/100;
+    const openAccounts=accounts.filter(a=>!a.archived);
+    const usable=openAccounts.filter(a=>!a.protected);
+    const primaryId=Number(setting(settings,'primaryAccountId',0));
+    const primary=usable.find(a=>Number(a.id)===primaryId)||usable[0]||null;
+    const selectedSpending=Number(setting(settings,'spendingAccountId',
+      setting(settings,'salaryGuideSpendingAccount',0)));
+    const spending=usable.find(a=>Number(a.id)===selectedSpending)||
+      usable.find(a=>norm(a.kind).includes('prepag'))||primary;
+    const budgetTotal=moneyRound(budgets.filter(b=>!b.archived)
+      .reduce((s,b)=>s+Math.max(0,budgetTarget(b)-Number(b.spent||0)),0));
+    const salary=salaryDate(settings,now),today=iso(now);
+    const obligations=scheduledCommitments(commitments,now,6,liabilities)
+      .filter(c=>c.active!==false&&!c.archived&&!c.paidDate&&c.dueDate&&c.dueDate<salary
+        &&!c.fundedByGoal);
+    const linkedAccount=c=>{
+      const linked=liabilities.find(l=>
+        (c.liabilityId!=null&&Number(l.id)===Number(c.liabilityId))||
+        (c.liabilityKey&&l.scheduleKey===c.liabilityKey));
+      const requested=Number(c.accountId||linked?.accountId||0);
+      const valid=usable.find(a=>Number(a.id)===requested);
+      return{accountId:valid?.id??primary?.id??null,assumed:!valid};
+    };
+    const tagged=obligations.map(c=>({...c,...linkedAccount(c)}));
+    const rows=openAccounts.map(a=>{
+      const dueItems=tagged.filter(c=>Number(c.accountId)===Number(a.id));
+      const reservedDue=moneyRound(dueItems.reduce((s,c)=>s+Number(c.amount||0),0));
+      const budgetReserved=!a.protected&&spending&&Number(a.id)===Number(spending.id)
+        ?budgetTotal:0;
+      const balance=moneyRound(a.balance);
+      const free=a.protected?0:moneyRound(Math.max(0,balance-reservedDue-budgetReserved));
+      const shortfall=a.protected?0:moneyRound(Math.max(0,reservedDue+budgetReserved-balance));
+      return{id:a.id,name:a.name||'Conto',protected:!!a.protected,balance,
+        reservedDue,budgetReserved,free,shortfall,dueItems,
+        availableForBudget:Math.max(0,Math.min(budgetReserved,
+          moneyRound(balance-reservedDue))),
+        isPrimary:!!primary&&Number(a.id)===Number(primary.id),
+        isSpending:!!spending&&Number(a.id)===Number(spending.id)};
+    });
+    const sum=key=>moneyRound(rows.reduce((s,x)=>s+Number(x[key]||0),0));
+    return{today,salary,cycleStart:cycleStart(settings,now),
+      primaryAccountId:primary?.id??null,spendingAccountId:spending?.id??null,
+      primary:rows.find(x=>x.isPrimary)||null,
+      spending:rows.find(x=>x.isSpending)||null,accounts:rows,
+      obligations:tagged,obligationsCount:tagged.length,
+      totalBalance:sum('balance'),totalReserved:sum('reservedDue'),
+      totalBudget:budgetTotal,totalFree:sum('free'),
+      totalShortfall:sum('shortfall'),budgetsAssigned:!!spending,
+      accountAssignmentInferred:tagged.some(c=>c.assumed),
+      spendingAccountInferred:!usable.some(a=>Number(a.id)===selectedSpending),
+      spendingAvailable:rows.find(x=>x.isSpending)?.availableForBudget||0};
+  }
+
+  function calculate(snapshot={},now=new Date()){
+    const {accounts=[],budgets=[],liabilities=[],commitments=[],goals=[],settings=[]}=snapshot;
+    const available=accountAvailability(snapshot,now);
+    const {today,salary}=available;
     const total=accounts.reduce((s,a)=>s+Number(a.balance||0),0);
-    const protectedTotal=accounts.filter(a=>a.protected&&!a.archived).reduce((s,a)=>s+Number(a.balance||0),0);
-    const goalSavings=goals.filter(g=>!g.completed&&!g.archived).reduce((sum,g)=>sum+Math.max(0,Number(g.current||0)),0);
-    const unbankedSavingsReserve=Math.max(0,goalSavings-protectedTotal);
-    const ordinary=total-protectedTotal;
-    const activeDue=scheduledCommitments(commitments,now,6,liabilities).filter(c=>String(c.dueDate)<=salary);
-    const due=activeDue.reduce((s,c)=>s+Number(c.amount||0),0);
+    const protectedTotal=accounts.filter(a=>a.protected&&!a.archived)
+      .reduce((s,a)=>s+Number(a.balance||0),0);
+    const ordinary=available.accounts.filter(a=>!a.protected).reduce((s,a)=>s+a.balance,0);
+    const activeDue=available.obligations,due=available.totalReserved;
     const overallShortfall=Math.max(0,due-ordinary);
-    const primaryId=Number(setting(settings,'primaryAccountId',accounts.find(a=>!a.protected)?.id||0));
-    const primary=accounts.find(a=>Number(a.id)===primaryId)||accounts.find(a=>!a.protected)||null;
-    const accountCoverage=accountFunding(activeDue,accounts,liabilities,primary);
-    const fundingShortfall=accountCoverage.reduce((s,x)=>s+Number(x.shortfall||0),0);
-    const primaryCoverage=accountCoverage.find(x=>Number(x.accountId)===Number(primary?.id));
-    const primaryDue=Number(primaryCoverage?.due||0);
-    const primaryShortfall=Number(primaryCoverage?.shortfall||0);
+    const accountCoverage=available.accounts.filter(a=>!a.protected).map(a=>({
+      accountId:a.id,accountName:a.name,due:a.reservedDue,balance:a.balance,
+      shortfall:Math.max(0,a.reservedDue-a.balance)
+    }));
+    const fundingShortfall=accountCoverage.reduce((s,a)=>s+a.shortfall,0);
+    const primaryAccount=accounts.find(a=>Number(a.id)===Number(available.primaryAccountId));
+    const primaryDue=available.primary?.reservedDue||0;
+    const primaryShortfall=Math.max(0,primaryDue-(available.primary?.balance||0));
     const blockingShortfall=Math.max(overallShortfall,fundingShortfall);
-    const budgetRemaining=budgets.reduce((s,b)=>s+Math.max(0,budgetTarget(b)-Number(b.spent||0)),0);
-    const afterDue=Math.max(0,ordinary-due-unbankedSavingsReserve);
-    const spendable=blockingShortfall>0?0:Math.max(0,Math.min(budgetRemaining,afterDue));
+    const budgetRemaining=available.totalBudget;
+    const afterDue=Math.max(0,ordinary-due);
+    const spendable=available.spendingAvailable;
     const days=Math.max(1,daysBetween(today,salary)+1);
     const salaryNet=Number(setting(settings,'salaryNet',0)||0);
-    const monthlyBudget=budgets.reduce((s,b)=>s+budgetTarget(b),0);
+    const monthlyBudget=budgets.filter(b=>!b.archived)
+      .reduce((s,b)=>s+budgetTarget(b),0);
     const fixedData=fixedBreakdown(liabilities,commitments,now),fixed=fixedData.total;
-    const rateTotal=fixedData.items.filter(x=>x.kind==='liability').reduce((s,x)=>s+x.amount,0),recurringTotal=fixedData.items.filter(x=>x.kind==='recurring').reduce((s,x)=>s+x.amount,0);
+    const rateTotal=fixedData.items.filter(x=>x.kind==='liability').reduce((s,x)=>s+x.amount,0);
+    const recurringTotal=fixedData.items.filter(x=>x.kind==='recurring').reduce((s,x)=>s+x.amount,0);
     const goalCapacity=Math.max(0,salaryNet-monthlyBudget-fixed);
     const goal=primaryGoal(goals,now),goalNeed=goal?goalStats(goal,now).monthly:null;
-    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,accountCoverage,fundingShortfall,primaryShortfall,blockingShortfall,primary,primaryDue,budgetRemaining,afterDue,unbankedSavingsReserve,spendable,days,daily:spendable/days,salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,fixedItems:fixedData.items,goalCapacity,goal,goalNeed,goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0};
+    return{today,salary,total,protectedTotal,ordinary,activeDue,due,overallShortfall,
+      accountCoverage,fundingShortfall,primaryShortfall,primaryReserveShortfall:primaryShortfall,
+      blockingShortfall,primary:primaryAccount||null,primaryDue,budgetRemaining,afterDue,
+      // A goal's recorded progress is not proof of money held in any specific account.
+      // Never subtract unlinked savings again from cash or from the bank's free margin.
+      unbankedSavingsReserve:0,spendable,days,daily:spendable/days,
+      salaryNet,monthlyBudget,fixed,rateTotal,recurringTotal,
+      fixedItems:fixedData.items,goalCapacity,goal,goalNeed,
+      goalGap:goalNeed?Math.max(0,goalNeed-goalCapacity):0,
+      availability:available};
   }
 
   function monthSequence(now=new Date(),count=6){const out=[];for(let i=0;i<count;i++){const d=new Date(now.getFullYear(),now.getMonth()+i,1,12);out.push({key:iso(d).slice(0,7),date:d})}return out}
@@ -389,6 +459,6 @@ const FinanceEngine=(()=>{
     return{changed};
   }
 
-  return{norm,iso,parse,calculate,scheduledCommitments,loanCycleAudit,liabilityAmountForMonth,salaryDate,cycleStart,salaryCycleBounds,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
+  return{norm,iso,parse,calculate,accountAvailability,scheduledCommitments,loanCycleAudit,liabilityAmountForMonth,salaryDate,cycleStart,salaryCycleBounds,budgetTarget,budgetCeiling,monthlyEquivalent,fixedMonthly,fixedBreakdown,monthBreakdown,goalStats,primaryGoal,projection,nextDateByCadence,syncBudgetCycle,repairSchedules};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceEngine;
