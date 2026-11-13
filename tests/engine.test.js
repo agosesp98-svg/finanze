@@ -317,6 +317,36 @@ async function main(){
     cents(b.rateTotal,250,'finale gia registrato non deve essere duplicato');
   }
 
+  {
+    const now=new Date(2026,10,13,12);
+    const base={id:199,name:'Finanziamento di test',monthly:91.57,
+      nextDueDate:'2026-11-16',firstDueDate:'2026-10-15',
+      recurrenceEnd:'2027-01-15',completed:false,archived:false};
+    const bill={id:299,name:'Finanziamento di test',amount:91.57,
+      dueDate:'2026-11-15',liabilityId:199,cadence:'Mensile',
+      active:true,generated:true};
+    const changes=[];
+    const db={put:async(store,value)=>{changes.push({store,value})},
+      add:async(store,value)=>{changes.push({store,value})}};
+    await E.repairSchedules(db,{liabilities:[base],commitments:[bill]},now);
+    assert.equal(changes.filter(x=>x.store==='commitments'&&x.value.dueDate==='2026-11-16').length,
+      0,'una scadenza spostata di un giorno non genera una rata duplicata');
+    const phase={...base,monthlyPhaseComplete:true};
+    changes.length=0;
+    await E.repairSchedules(db,{liabilities:[phase],commitments:[]},now);
+    assert.equal(changes.length,0,
+      'rate ordinarie concluse non devono produrre nuove rate mensili');
+    changes.length=0;
+    await E.repairSchedules(db,{liabilities:[base],commitments:[]},now);
+    assert.equal(changes.filter(x=>x.store==='commitments'&&x.value.dueDate==='2026-11-16').length,
+      1,'un finanziamento senza scadenza registrata continua a generarla');
+    const alreadyPaid={...bill,active:false,archived:true,paidDate:'2026-11-13'};
+    changes.length=0;
+    await E.repairSchedules(db,{liabilities:[base],commitments:[alreadyPaid]},now);
+    assert.equal(changes.length,0,
+      'una rata già pagata in anticipo non viene rigenerata');
+  }
+
   console.log('Financial engine tests: OK');
 }
 
