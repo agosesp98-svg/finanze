@@ -1,5 +1,5 @@
-const CACHE='finanze-stable-v29-account-balances-reserves';
-const V='20261113a';
+const CACHE='finanze-stable-v30-safe-backup-loan-repair';
+const V='20261113b';
 const CORE=['./','./index.html',`./manifest.webmanifest?v=${V}`,`./app.css?v=${V}`,`./db.js?v=${V}`,`./engine.js?v=${V}`,`./spendable-guard.js?v=${V}`,`./app.js?v=${V}`,`./appearance.js?v=${V}`,`./insights.js?v=${V}`,`./projection-details.js?v=${V}`,`./recurrence-controls.js?v=${V}`,`./goal-priority.js?v=${V}`,`./plan-patch.js?v=${V}`,`./plan-update-ui.js?v=${V}`,`./plan-update.css?v=${V}`,`./salary-guide.js?v=${V}`,`./salary-guide.css?v=${V}`,`./ui-polish.css?v=${V}`,`./home-clean.css?v=${V}`,`./pages-clean.css?v=${V}`,`./availability-ui.css?v=${V}`,`./app-updater.js?v=${V}`,'./icons/icon-192.png','./icons/icon-512.png','./icons/apple-touch-icon.png'];
 
 // Best-effort caching: a single temporarily unavailable asset must not lock
