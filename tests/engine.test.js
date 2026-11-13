@@ -331,6 +331,9 @@ async function main(){
     await E.repairSchedules(db,{liabilities:[base],commitments:[bill]},now);
     assert.equal(changes.filter(x=>x.store==='commitments'&&x.value.dueDate==='2026-11-16').length,
       0,'una scadenza spostata di un giorno non genera una rata duplicata');
+    const projected=E.scheduledCommitments([bill],now,3,[base]);
+    assert.equal(projected.filter(x=>x.dueDate.startsWith('2026-11')).length,1,
+      'anche il riepilogo virtuale deve evitare la rata duplicata dopo lo spostamento di un giorno');
     const phase={...base,monthlyPhaseComplete:true};
     changes.length=0;
     await E.repairSchedules(db,{liabilities:[phase],commitments:[]},now);
