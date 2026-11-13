@@ -14,7 +14,7 @@ const FinanceEngine=(()=>{
     const today=iso(now);
     const day=clamp(Number(setting(settings,'salaryDay',setting(settings,'salaryLatestDay',10)))||10,1,28);
     let d=new Date(now.getFullYear(),now.getMonth(),day,12);
-    if(now.getDate()>day)d=new Date(now.getFullYear(),now.getMonth()+1,day,12);
+    if(now.getDate()>=day)d=new Date(now.getFullYear(),now.getMonth()+1,day,12);
     const derived=iso(d);
     // An early manually-entered date cannot shorten the protected payroll cycle.
     return configured&&configured>=today&&configured>derived?configured:derived;
