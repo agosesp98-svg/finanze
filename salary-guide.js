@@ -48,9 +48,17 @@ function calc(s,amount,sourceId,spendingId,at=new Date()){
  const fixed=datedTotal;
  const budgets=s.budgets.filter(x=>!x.archived);
  const budget=round(budgets.reduce((n,x)=>n+Math.max(0,FinanceEngine.budgetTarget(x)-Number(x.spent||0)),0));
+ // Only new funding gaps require allocating this paycheck.
  const available=round(Math.max(0,amount));
- const bills=round(Math.min(available,fixed));
- const life=round(Math.min(Math.max(0,available-bills),budget));
+ const unfundedBills=round([...byAccount.values()].reduce((sum,x)=>{
+  const account=accounts.find(a=>Number(a.id)===Number(x.id));
+  return sum+Math.max(0,Number(x.amount||0)-Number(account?.balance||0));
+ },0));
+ const spendingBills=Number(byAccount.get(Number(spending?.id))?.amount||0);
+ const existingSpending=spending?Math.max(0,Number(spending.balance||0)-spendingBills):0;
+ const unfundedBudget=round(Math.max(0,budget-existingSpending));
+ const bills=round(Math.min(available,unfundedBills));
+ const life=round(Math.min(Math.max(0,available-bills),unfundedBudget));
  let remaining=round(Math.max(0,available-bills-life));
  const goals=s.goals.filter(g=>!g.archived&&!g.completed&&Number(g.target||0)>Number(g.current||0)).sort((a,b)=>{
   const rank=x=>Number(x.priorityRank)||({'Alta':1,'Media':2,'Bassa':3}[x.priority]||3);
@@ -85,7 +93,7 @@ function calc(s,amount,sourceId,spendingId,at=new Date()){
  });
  // Remaining surplus is a cautious unassigned reserve, not automatically spent.
  return{source,spending,available,bills,life,fixed,budget,datedTotal,audit,due:[...byAccount.values()],dueItems:due.map(x=>({name:x.name,amount:Number(x.amount||0),date:x.dueDate,estimated:!!x.estimated})),goals:allocations,reserve:remaining,
-  shortfall:round(Math.max(0,fixed+budget-available)),start,end};
+  shortfall:round(Math.max(0,unfundedBills+unfundedBudget-available)),start,end};
 }
 function renderInstructions(plan){
  const host=$('salaryGuideResults');if(!host)return;
@@ -101,7 +109,7 @@ function renderInstructions(plan){
  host.innerHTML='<div class="salary-guide-status" role="status">Ripartizione indicativa dello stipendio di '+money(plan.available)+'.</div>'+
   '<p class="salary-guide-note">Periodo verificato: '+esc(duePretty(plan.start))+' → '+esc(duePretty(plan.end))+' (escluso il giorno finale). Sono conteggiate solo le uscite non segnate come pagate.</p>'+
   '<ul class="salary-guide-steps">'+
-  '<li><span>Riserva per rate e spese fisse fino al prossimo stipendio</span><strong>'+money(plan.bills)+'</strong></li>'+
+  '<li><span>Da integrare per gli addebiti non ancora coperti</span><strong>'+money(plan.bills)+'</strong></li>'+
   transfer+allocations+
   (plan.reserve>0?'<li><span>Margine non assegnato · tienilo come riserva</span><strong>'+money(plan.reserve)+'</strong></li>':'')+
   '</ul>'+
@@ -136,10 +144,10 @@ async function render(){
   $('salaryGuideLast').hidden=false;
   const eventSource=accounts.find(a=>Number(a.id)===Number(newest.accountId));
   if(eventSource){select('salaryGuideAccount',accounts,eventSource.id);$('salaryGuideAccount').value=String(eventSource.id)}
-  // Reconstruct last plan from stored salary event, never add the income twice on refresh.
+  // A past salary should not trigger a new transfer proposal.
   const priorSpending=setting(s.settings,'salaryGuideSpendingAccount',daily?.id||newest.accountId);
   if(accounts.some(a=>String(a.id)===String(priorSpending)))$('salaryGuideSpend').value=String(priorSpending);
-  renderInstructions(calc(s,Number(newest.amount),newest.accountId,$('salaryGuideSpend').value,new Date()));
+
  }
 }
 async function submit(e){
@@ -158,9 +166,9 @@ async function submit(e){
   feedback.textContent='Registrazione dello stipendio…';
   await FinanceDB.recordSalary(value,plan.source.id,spendingId,today());
   feedback.textContent='Stipendio registrato. Piano operativo pronto.';
-  // Show actual proposal immediately and update all main displays on reload.
+  // Keep this plan visible and refresh the actual balances.
   renderInstructions(plan);
-  setTimeout(()=>location.reload(),750);
+  document.dispatchEvent(new CustomEvent('finanze:finance-changed'));
  }catch(err){feedback.textContent=err.message||'Impossibile registrare lo stipendio.'}
  finally{busy=false;btn.disabled=false}
 }
@@ -172,10 +180,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   try{sessionStorage.setItem('finanze.salaryGuide.open',host.open?'1':'0')}catch{}
  });
  $('salaryGuideForm').addEventListener('submit',submit);
- $('salaryGuideSpend').addEventListener('change',async()=>{
-  const s=await snapshot();const income=s.movements.filter(m=>m.salaryGuide===true&&m.type==='income').sort((a,b)=>String(b.date).localeCompare(String(a.date))||Number(b.id)-Number(a.id))[0];
-  if(income)renderInstructions(calc(s,Number(income.amount),income.accountId,$('salaryGuideSpend').value,new Date()));
- });
+
  render().catch(e=>{$('salaryGuideFeedback').textContent='Impossibile preparare il piano: '+e.message});
 });
 })();
