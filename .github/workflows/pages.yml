@@ -43,6 +43,7 @@ jobs:
         run: |
           node tests/engine.test.js
           node tests/account-availability.test.js
+          node tests/backup-import.test.js
           node tests/home.test.js
           node tests/pages-clean.test.js
           node tests/spendable-guard.test.js
