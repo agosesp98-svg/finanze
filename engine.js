@@ -452,7 +452,27 @@ const FinanceEngine=(()=>{
       const cutoff=l.recurrenceEnd||l.finalDueDate||'';
       for(const c of linked.filter(c=>c.active!==false&&c.dueDate)){const isFinal=Number(l.finalPayment||0)>0&&l.finalPaymentDate&&String(c.dueDate)===String(l.finalPaymentDate)&&Number(c.amount||0)===Number(l.finalPayment||0);if(cutoff&&String(c.dueDate)>String(cutoff)&&!isFinal){await db.put('commitments',{...c,active:false});changed=true}}
       if(Number(l.finalPayment||0)>0&&l.monthlyPhaseComplete&&l.finalPaymentDate){const exists=linked.some(c=>c.active!==false&&String(c.dueDate)===String(l.finalPaymentDate)&&Number(c.amount||0)===Number(l.finalPayment||0));if(!exists){await db.add('commitments',{name:l.name||'Pagamento finale',amount:Number(l.finalPayment),dueDate:l.finalPaymentDate,cadence:'Una tantum',estimated:false,active:true,recurring:false,generated:true,liabilityId:l.id,liabilityKey:l.scheduleKey||'',note:'Pagamento finale collegato al finanziamento'});changed=true}}
-      else if(Number(l.monthly||0)>0&&l.nextDueDate){const beyond=cutoff&&String(l.nextDueDate)>String(cutoff),exists=linked.some(c=>c.active!==false&&String(c.dueDate)===String(l.nextDueDate));if(!beyond&&!exists){await db.add('commitments',{name:l.name,amount:liabilityAmountForMonth(l,monthKey(l.nextDueDate)),dueDate:l.nextDueDate,cadence:'Mensile',estimated:false,active:true,recurring:true,generated:true,liabilityId:l.id,liabilityKey:l.scheduleKey||'',note:'Scadenza collegata al piano rate'});changed=true}}
+      else if(!l.monthlyPhaseComplete&&Number(l.monthly||0)>0&&l.nextDueDate){
+        const beyond=cutoff&&String(l.nextDueDate)>String(cutoff);
+        const expected=liabilityAmountForMonth(l,monthKey(l.nextDueDate));
+        // A one-day edit of the due date must not create a second installment.
+        // Existing unpaid or paid installments with the same monthly amount,
+        // within 3 days, represent the same installment until manually corrected.
+        const exists=linked.some(c=>{
+          if(!c.dueDate||(!c.paidDate&&(c.archived||c.active===false)))return false;
+          if(monthKey(c.dueDate)!==monthKey(l.nextDueDate))return false;
+          if(Math.abs(Number(c.amount||0)-expected)>0.005)return false;
+          const days=Math.abs((parse(c.dueDate)-parse(l.nextDueDate))/86400000);
+          return days<=3;
+        });
+        if(!beyond&&!exists&&expected>0){
+          await db.add('commitments',{name:l.name,amount:expected,dueDate:l.nextDueDate,
+            cadence:'Mensile',estimated:false,active:true,recurring:true,generated:true,
+            accountId:l.accountId||null,liabilityId:l.id,liabilityKey:l.scheduleKey||'',
+            note:'Scadenza collegata al piano rate'});
+          changed=true;
+        }
+      }
     }
     const groups=new Map();for(const c of commitments){if(c.archived||c.liabilityId||c.liabilityKey)continue;const cadence=norm(c.cadence);if(!(c.recurring===true||isRecurringCadence(cadence)))continue;const key=norm(c.name);if(!key)continue;const old=groups.get(key);if(!old||String(c.dueDate||'')>String(old.dueDate||''))groups.set(key,c)}
     const today=iso(now);for(const latest of groups.values()){if(latest.active!==false)continue;let next=nextDateByCadence(latest.dueDate,latest.cadence);if(!next)continue;while(next<today)next=nextDateByCadence(next,latest.cadence);if(latest.recurrenceEnd&&next>latest.recurrenceEnd)continue;if(commitments.some(c=>c.active!==false&&norm(c.name)===norm(latest.name)&&c.dueDate===next))continue;const copy={...latest};delete copy.id;delete copy.paidDate;delete copy.paidAmount;copy.dueDate=next;copy.active=true;copy.generated=true;copy.recurring=true;copy.estimated=!!(latest.variableAmount||latest.estimated);await db.add('commitments',copy);changed=true}
