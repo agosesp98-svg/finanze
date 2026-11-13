@@ -402,6 +402,23 @@ const FinanceApp=(()=>{
         $('#liError').textContent='Per includere le rate servono una rata mensile positiva e la data della prossima scadenza.';
         return;
       }
+      if(phase&&!l.monthlyPhaseComplete&&!finished&&!archived){
+        if(!confirm('Confermi che tutte le rate ordinarie sono terminate? Se prosegui, le rate mensili non compariranno più nelle previsioni.')){
+          return;
+        }
+      }
+      const activeLinked=state.commitments.find(x=>
+        !x.archived&&x.active!==false&&!x.paidDate&&
+        (Number(x.liabilityId)===Number(l.id)||(l.scheduleKey&&x.liabilityKey===l.scheduleKey))&&
+        x.dueDate&&due&&x.dueDate!==due&&
+        x.dueDate.slice(0,7)===due.slice(0,7)&&
+        Math.abs((parse(x.dueDate)-parse(due))/86400000)<=3&&
+        Math.abs(Number(x.amount||0)-monthly)<0.005);
+      if(activeLinked&&!phase&&!finished&&!archived){
+        $('#liError').textContent='Esiste già una rata non pagata il '+
+          dueLabel(activeLinked.dueDate)+'. Per cambiarne la data, apri quella scadenza; non crearne un doppione.';
+        return;
+      }
       l.name=name;l.monthly=monthly;
       l.remaining=$('#liRemaining').value===''?null:Math.max(0,Number($('#liRemaining').value));
       l.nextDueDate=due;
