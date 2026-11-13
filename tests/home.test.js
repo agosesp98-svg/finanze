@@ -10,7 +10,7 @@ const home=html.split('<section id="view-today"')[1]?.split('<section id="view-m
 
 for(const id of ['spendCard','spendValue','upcomingList','upcomingCycle',
   'homeDueFoot','salaryGuide','salaryGuideForm','salaryGuideSummaryMeta',
-  'accountsStrip','homeManageAccounts']){
+  'accountsStrip','homeManageAccounts','homeSpendingValue','homeSpendingNote']){
   assert.ok(home.includes('id="'+id+'"'),'Missing Home component: '+id);
 }
 assert.match(home,/<details id="salaryGuide"[^>]*>/,
@@ -21,6 +21,10 @@ for(const outdated of ['id="monthlyPlan"','id="primaryGoal"','home-loan-shortcut
   'home-update-status']){
   assert.ok(!home.includes(outdated),'Remove duplicated or technical Home UI: '+outdated);
 }
+assert.ok(app.includes("FinanceEngine.accountAvailability(state,now)"),
+  'Home must calculate free bank cash per account, not global cash or goal savings');
+assert.ok(app.includes("availability.spendingAvailable"),
+  'Daily spending must use the already-funded spending-account budget');
 assert.ok(app.includes("FinanceEngine.monthBreakdown(state,currentCycle,now)"),
   'Home bills must come from the salary cycle, not a calendar-month estimate');
 assert.ok(app.includes('dues.slice(0,3)'),'Home should show only the first three bills');
