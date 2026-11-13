@@ -88,11 +88,26 @@ const FinanceDB=(()=>{
   }
 
   async function importAll(payload){
-    if(!payload?.stores)throw new Error('Backup non valido');
-    await clearAll();
-    for(const store of S){
-      for(const value of(Array.isArray(payload.stores[store])?payload.stores[store]:[]))await put(store,value);
+    // Never clear real financial data before checking the complete backup.
+    if(payload?.version!==1||!payload.stores||
+      S.some(store=>!Array.isArray(payload.stores[store])||
+        payload.stores[store].some(entry=>!entry||typeof entry!=='object'||
+          entry[store==='settings'?'key':'id']==null))){
+      throw new Error('Backup incompleto o non valido. Nessun dato è stato modificato.');
     }
+    // One transaction for every store: an error aborts the entire restore.
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(S,'readwrite');
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error||new Error('Ripristino non riuscito.'));
+      tx.onabort=()=>reject(tx.error||new Error('Ripristino annullato: dati originali conservati.'));
+      for(const key of S){
+        const store=tx.objectStore(key);
+        store.clear();
+        for(const record of payload.stores[key])store.put(record);
+      }
+    });
   }
 
   // One IndexedDB transaction guarantees a complete plan migration or no changes.
