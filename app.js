@@ -198,23 +198,25 @@ const FinanceApp=(()=>{
   }
   function renderPlan(){
     const now=new Date(),cycleKey=FinanceEngine.cycleStart(state.settings,now).slice(0,7);
+    const available=FinanceEngine.accountAvailability(state,now);
+    const primary=available.primary,spending=available.spending;
     const b=FinanceEngine.monthBreakdown(state,cycleKey,now);
     const lastDate=parse(b.cycleEnd);lastDate.setDate(lastDate.getDate()-1);
     const cycleLabel=dueLabel(b.cycleStart)+' – '+dueLabel(FinanceEngine.iso(lastDate));
     $('#planSummary').innerHTML=
-      '<div class="clean-plan-cycle"><small>CICLO IN CORSO</small><strong>'+esc(cycleLabel)+'</strong></div>'+
+      '<div class="clean-plan-cycle"><small>DISPONIBILITÀ REALE</small><strong>Fino al '+esc(dueLabel(available.salary))+'</strong></div>'+
       '<div class="clean-plan-kpis">'+
-        '<div><small>Da coprire</small><strong>'+money(b.plannedOutflow)+'</strong></div>'+
-        '<div><small>Margine stimato</small><strong>'+(b.salaryNet?money(b.capacity):'—')+'</strong></div>'+
+        '<div><small>Non impegnati su '+esc(primary?.name||'conto principale')+'</small><strong>'+money(primary?.free||0)+'</strong></div>'+
+        '<div><small>Per le spese quotidiane</small><strong>'+money(available.spendingAvailable)+'</strong></div>'+
       '</div>'+
-      '<div class="clean-plan-breakdown"><span>Budget '+money(b.budgetTotal)+'</span>'+
-        '<span>Rate e uscite '+money(b.fixedTotal)+'</span></div>'+
-      (!b.salaryNet?'<p class="clean-plan-hint">Imposta lo stipendio nelle Impostazioni per stimare il margine.</p>':
-        '<p class="clean-plan-hint">Previsione basata sulle scadenze non pagate del ciclo; non rappresenta il saldo del conto.</p>');
+      '<div class="clean-plan-breakdown"><span>Saldo '+esc(primary?.name||'conto')+' '+money(primary?.balance||0)+'</span>'+
+        '<span>Addebiti da riservare '+money(primary?.reservedDue||0)+'</span>'+
+        '<span>Budget su '+esc(spending?.name||'conto da scegliere')+' '+money(available.totalBudget)+'</span></div>'+
+      '<p class="clean-plan-hint">Sono saldi attuali dopo gli impegni non pagati. I prossimi cicli qui sotto sono invece previsioni basate sullo stipendio.</p>';
 
     $('#budgetList').innerHTML=state.budgets.some(b=>!b.archived&&FinanceEngine.budgetTarget(b)>0)?state.budgets.filter(b=>!b.archived&&FinanceEngine.budgetTarget(b)>0).map(b=>{const target=FinanceEngine.budgetTarget(b),ceiling=FinanceEngine.budgetCeiling(b),spent=Number(b.spent||0),pct=target?spent/target*100:0,cls=spent>ceiling?'danger':spent>target?'over':'';return `<button class="budget-row ${cls}" data-budget="${b.id}" type="button"><div class="budget-top"><b>${esc(b.name)}</b><strong>${money(Math.max(0,target-spent))}</strong></div><div class="budget-sub"><span>Speso ${money(spent)} su ${money(target)}</span><span>${Math.round(pct)}%</span></div><div class="progress blue"><i style="width:${clamp(pct,0,100)}%"></i></div></button>`}).join(''):'<div class="empty">Nessun budget.</div>';
-    const scheduled=FinanceEngine.scheduledCommitments(state.commitments,now,6,state.liabilities)
-      .filter(x=>!x.liabilityId&&!x.liabilityKey);
+    const allScheduled=FinanceEngine.scheduledCommitments(state.commitments,now,6,state.liabilities);
+    const scheduled=allScheduled.filter(x=>!x.liabilityId&&!x.liabilityKey);
     const count=scheduled.length,visible=scheduledExpanded?scheduled:scheduled.slice(0,5);
     $('#scheduledList').innerHTML=visible.length?visible.map(commitmentRow).join('')
       :'<div class="empty">Nessuna uscita programmata.</div>';
@@ -233,7 +235,7 @@ const FinanceApp=(()=>{
       if(l.finalDueDate)bits.push(`fine ${dueLabel(l.finalDueDate)}`);
       else if(l.recurrenceEnd)bits.push(`rate fino al ${dueLabel(l.recurrenceEnd)}`);
       if(l.finalPaymentDate)bits.push(`pagamento finale ${dueLabel(l.finalPaymentDate)}`);
-      const next=scheduled.find(x=>String(x.liabilityId)===String(l.id)||(l.scheduleKey&&String(x.liabilityKey)===String(l.scheduleKey)));
+      const next=allScheduled.find(x=>String(x.liabilityId)===String(l.id)||(l.scheduleKey&&String(x.liabilityKey)===String(l.scheduleKey)));
       const nextDate=next?.dueDate||l.nextDueDate||l.finalPaymentDate||'';
       const final=nextDate&&l.finalPaymentDate===nextDate&&Number(l.finalPayment||0)>0;
       const amount=next?.amount??(final?Number(l.finalPayment):FinanceEngine.liabilityAmountForMonth(l,String(nextDate||today()).slice(0,7)));
@@ -432,7 +434,41 @@ const FinanceApp=(()=>{
   function categoryChips(){return customCategories.length?customCategories.map((c,i)=>`<button type="button" data-remove-category="${i}">${esc(c)} ×</button>`).join(''):'<span class="helper">Nessuna categoria extra.</span>'}
   async function saveCustomCategories(){customCategories=[...new Map(customCategories.map(x=>[norm(x),x])).values()].filter(Boolean);await saveSetting(CATEGORY_KEY,customCategories)}
 
-  function openSpendDetail(){const m=model();openSheet('Quanto puoi spendere',`<div class="sheet-section"><div class="kpi-grid"><div class="kpi"><small>Spendibile</small><strong>${money(m.spendable)}</strong></div><div class="kpi"><small>Media giornaliera</small><strong>${money(m.daily)}</strong></div></div></div><div class="sheet-section"><h3>Come viene calcolato</h3><div class="plan-equation"><span>Conti spendibili</span><strong>${money(m.ordinary)}</strong><span>Uscite prima dello stipendio</span><strong>− ${money(m.due)}</strong><span>Budget residuo</span><strong>${money(m.budgetRemaining)}</strong><b class="result">Spendibile prudenziale</b><strong class="result-value">${money(m.spendable)}</strong></div>${m.primaryShortfall>0?`<p class="helper" style="margin-top:12px">Il conto principale è corto di ${money(m.primaryShortfall)} rispetto agli addebiti attribuiti.</p>`:''}</div>${m.activeDue?.length?`<div class="sheet-section"><h3>Scadenze considerate fino al ${esc(m.salary)}</h3><div class="allocation-list">${m.activeDue.map(c=>`<div class="allocation-row"><span>${esc(c.name)} · ${esc(c.dueDate)}${c.projected?' (prevista)':''}</span><strong>${money(c.amount)}</strong></div>`).join('')}</div></div>`:''}`)}
+  function openSpendDetail(){
+    const v=FinanceEngine.accountAvailability(state,new Date()),primary=v.primary,spending=v.spending;
+    const rows=v.accounts.filter(a=>!a.protected).map(a=>
+      '<div class="availability-account-detail"><h3>'+esc(a.name)+'</h3>'+
+        '<div class="allocation-list">'+
+          '<div class="allocation-row"><span>Saldo attuale</span><strong>'+money(a.balance)+'</strong></div>'+
+          '<div class="allocation-row"><span>Addebiti non pagati</span><strong>− '+money(a.reservedDue)+'</strong></div>'+
+          (a.budgetReserved?'<div class="allocation-row"><span>Budget quotidiano riservato</span><strong>− '+money(a.budgetReserved)+'</strong></div>':'')+
+          '<div class="allocation-row fixed"><span>Non impegnati</span><strong>'+money(a.free)+'</strong></div>'+
+        '</div>'+
+        (a.shortfall?'<p class="availability-shortfall">Mancano '+money(a.shortfall)+' per coprire gli impegni attribuiti a questo conto.</p>':'')+
+      '</div>').join('');
+    const due=v.obligations.slice().sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate)));
+    const dueRows=due.map(d=>{
+      const account=v.accounts.find(a=>Number(a.id)===Number(d.accountId));
+      return '<div class="allocation-row availability-due-line"><span><b>'+esc(d.name)+'</b>'+
+        '<small>'+esc(dueLabel(d.dueDate))+' · '+esc(account?.name||'Conto da verificare')+
+        (d.projected?' · Previsione':'')+(d.assumed?' · Conto attribuito automaticamente':'')+
+        '</small></span><strong>'+money(d.amount)+'</strong></div>';
+    }).join('');
+    openSheet('Quanto resta davvero',
+      '<div class="sheet-section availability-detail-top">'+
+        '<div class="kpi-grid"><div class="kpi"><small>Non impegnati su '+esc(primary?.name||'conto principale')+
+          '</small><strong>'+money(primary?.free||0)+'</strong></div>'+
+        '<div class="kpi"><small>Per le spese quotidiane ('+esc(spending?.name||'—')+
+          ')</small><strong>'+money(v.spendingAvailable)+'</strong></div></div>'+
+        '<p class="helper">Saldo e disponibilità non sono la stessa cosa: gli addebiti e i budget vengono riservati sul rispettivo conto.</p></div>'+
+      '<div class="sheet-section"><h3>Conto per conto</h3>'+rows+'</div>'+
+      '<div class="sheet-section"><h3>Scadenze da coprire prima del '+esc(dueLabel(v.salary))+
+        ' · '+money(v.totalReserved)+'</h3>'+
+        (dueRows?'<div class="allocation-list">'+dueRows+'</div>':'<p class="helper">Non ci sono scadenze non pagate registrate.</p>')+
+        '</div>'+
+      '<p class="helper availability-disclaimer">I progressi degli obiettivi non vengono sottratti una seconda volta: senza un conto di risparmio dedicato non possiamo presumere dove siano custoditi. Importi e date si basano sui dati presenti nell’app.</p>');
+  }
+
   async function exportBackup(){const payload=await FinanceDB.exportAll(),blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`finanze-backup-${today()}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('Backup esportato')}
   async function importBackup(file){if(!file)return;try{await FinanceDB.importAll(JSON.parse(await file.text()));location.reload()}catch{toast('Backup non valido')}}
   async function refresh(message=''){await load();await maintain();await load();render();if(message)toast(message)}
