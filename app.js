@@ -504,6 +504,8 @@ const FinanceApp=(()=>{
   });
   $('#backupInput').addEventListener('change',e=>importBackup(e.target.files?.[0]));document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()})}
 
+  document.addEventListener('finanze:finance-changed',()=>refresh().catch(err=>{console.error(err);toast('Impossibile aggiornare i saldi')}));
+
   async function init(){try{await load();await consumeRatePatch();await maintain();await load();render();bind();if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').then(r=>r.update()).catch(()=>{})}catch(err){console.error(err);toast('Errore nel caricamento dei dati')}requestAnimationFrame(()=>setTimeout(()=>$('#boot').classList.add('hide'),120))}
   return{init};
 })();
