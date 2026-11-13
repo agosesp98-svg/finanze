@@ -102,7 +102,17 @@ const FinanceEngine=(()=>{
       for(let step=0;Number(l.monthly||0)>0&&!l.monthlyPhaseComplete&&due&&due<horizon&&step<240;step++){
         if(end&&due>end)break;
         const amount=liabilityAmountForMonth(l,monthKey(due)),key='loan:'+String(l.id)+'|'+due;
-        if(due>=today&&amount>0&&!seen.has(key)){
+        // A modified due date must not create a second *virtual* installment
+        // near a recorded one (even if the original one was paid early).
+        const recordedNearby=commitments.some(c=>{
+          const belongs=Number(c.liabilityId)===Number(l.id)||
+            !!(l.scheduleKey&&c.liabilityKey===l.scheduleKey);
+          if(!belongs||!c.dueDate||monthKey(c.dueDate)!==monthKey(due))return false;
+          if(!c.paidDate&&(c.archived||c.active===false))return false;
+          return Math.abs(Number(c.amount||0)-amount)<0.005&&
+            Math.abs((parse(c.dueDate)-parse(due))/86400000)<=3;
+        });
+        if(due>=today&&amount>0&&!seen.has(key)&&!recordedNearby){
           forecasts.push({name:l.name,amount,dueDate:due,active:true,projected:true,estimated:false,cadence:'Mensile',
             accountId:l.accountId,liabilityId:l.id,liabilityKey:l.scheduleKey||'',sourceLiabilityId:l.id});
           seen.add(key);
