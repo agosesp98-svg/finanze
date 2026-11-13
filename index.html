@@ -38,10 +38,17 @@
         <div class="page-head home-page-head"><h1 id="homeTitle">Oggi</h1></div>
         <div id="todayStatus" class="status-banner" role="alert"></div>
 
-        <button id="spendCard" class="spend-card" type="button" aria-label="Apri il dettaglio della disponibilità">
-          <div><small id="spendLabel">Puoi spendere</small><strong id="spendValue">€ 0,00</strong></div>
-          <div class="spend-meta"><span id="spendDaily">€ 0 / giorno</span><span id="spendDays">—</span></div>
+        <button id="spendCard" class="spend-card" type="button" aria-label="Apri il dettaglio del saldo e degli addebiti ancora da pagare">
+          <div><small id="spendLabel">Non impegnati su ISP</small><strong id="spendValue">€ 0,00</strong></div>
+          <div class="spend-meta"><span id="spendDaily">Saldo: € 0,00</span><span id="spendDays">Da riservare: € 0,00</span></div>
         </button>
+        <div class="home-spending-ledger" id="homeSpendingLedger" aria-label="Budget per le spese quotidiane">
+          <div>
+            <small>Per le spese quotidiane</small>
+            <strong id="homeSpendingValue">€ 0,00</strong>
+          </div>
+          <p id="homeSpendingNote">Budget già destinato alle spese</p>
+        </div>
 
         <section class="home-due" aria-labelledby="homeDueTitle">
           <div class="section-title home-section-title">
