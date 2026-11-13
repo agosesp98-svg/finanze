@@ -23,8 +23,8 @@ const settings=[{key:'salaryNet',value:1500},{key:'salaryDay',value:10},{key:'pr
   assert.equal(m.due,60);
   assert.equal(m.ordinary,58);
   assert.equal(m.overallShortfall,2);
-  assert.equal(m.primaryReserveShortfall,36,'il conto principale deve poter coprire tutte le uscite fino allo stipendio');
-  assert.equal(m.blockingShortfall,36);
+  assert.equal(m.primaryReserveShortfall,6,'il conto principale copre soltanto i propri addebiti');
+  assert.equal(m.blockingShortfall,6,'gli addebiti di altri conti non vanno sottratti a quello principale');
   assert.equal(m.spendable,0);
 }
 
