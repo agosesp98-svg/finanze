@@ -332,8 +332,14 @@ const FinanceEngine=(()=>{
     const primary=usable.find(a=>Number(a.id)===primaryId)||usable[0]||null;
     const selectedSpending=Number(setting(settings,'spendingAccountId',
       setting(settings,'salaryGuideSpendingAccount',0)));
+    // A saved account selection always wins. If none is set, recognize
+    // PostePay even when its account type has been changed to "Conto corrente".
+    // Never silently assign daily spending to the salary account while a
+    // clearly identified spending card is available.
     const spending=usable.find(a=>Number(a.id)===selectedSpending)||
-      usable.find(a=>norm(a.kind).includes('prepag'))||primary;
+      usable.find(a=>norm(a.kind).includes('prepag'))||
+      usable.find(a=>/\bpostepay\b|\bposte pay\b/i.test(String(a.name||'')))||
+      primary;
     const budgetTotal=moneyRound(budgets.filter(b=>!b.archived)
       .reduce((s,b)=>s+Math.max(0,budgetTarget(b)-Number(b.spent||0)),0));
     const salary=salaryDate(settings,now),today=iso(now);
