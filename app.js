@@ -365,11 +365,50 @@ const FinanceApp=(()=>{
 
   function openCommitment(id=null){const item=id?state.commitments.find(x=>String(x.id)===String(id)):null;const linked=item&&(item.liabilityId||item.liabilityKey);const primary=state.accounts.find(a=>Number(a.id)===Number(item?.accountId||setting('primaryAccountId',0)))||state.accounts.find(a=>!a.protected);openSheet(item?'Uscita programmata':'Nuova uscita',`<form id="commitmentForm" class="form"><div class="field"><label>Nome</label><input id="cmName" value="${esc(item?.name||'')}" ${linked?'disabled':''} required></div><div class="form-grid"><div class="field"><label>Importo</label><input id="cmAmount" type="number" min="0.01" step="0.01" value="${item?Number(item.amount||0).toFixed(2):''}" ${linked?'disabled':''} required></div><div class="field"><label>Data</label><input id="cmDate" type="date" value="${item?.dueDate||today()}" ${linked?'disabled':''} required></div></div><div class="field"><label>Conto addebito</label><select id="cmAccount">${accountOptions(primary?.id,false)}</select></div>${linked?'<p class="helper">Importo e data sono gestiti dal piano rate.</p>':`<div class="field"><label>Frequenza</label><select id="cmCadence">${cadenceOptions(item?.cadence)}</select><p class="helper">Prima scadenza: usa la data indicata sopra. Le successive saranno calcolate dalla frequenza scelta.</p></div>`}<div class="form-actions">${item&&item.active!==false?`<button type="button" class="secondary-button" data-pay-commitment="${item.id}">Segna pagata</button>`:'<span></span>'}<button class="primary-button">Salva</button></div></form>`);$('#commitmentForm').onsubmit=async e=>{e.preventDefault();const cadence=linked?item.cadence:$('#cmCadence').value,value={...(item||{}),name:linked?item.name:$('#cmName').value.trim(),amount:linked?item.amount:Number($('#cmAmount').value||0),dueDate:linked?item.dueDate:$('#cmDate').value,cadence,accountId:Number($('#cmAccount').value)||null,active:item?.active!==false,recurring:linked?item.recurring:cadence!=='Una tantum',estimated:item?.estimated||false};if(item)await FinanceDB.put('commitments',value);else await FinanceDB.add('commitments',value);closeSheet();await refresh('Uscita aggiornata')}}
 
-  function payCommitment(id){const item=state.commitments.find(x=>String(x.id)===String(id));if(!item)return;const linked=state.liabilities.find(l=>Number(l.id)===Number(item.liabilityId)||(item.liabilityKey&&l.scheduleKey===item.liabilityKey));const preferred=state.accounts.find(a=>Number(a.id)===Number(item.accountId||linked?.accountId||setting('primaryAccountId',0)))||state.accounts.find(a=>!a.protected)||state.accounts[0];openSheet('Segna pagata',`<form id="payForm" class="form"><div class="field"><label>Importo</label><input id="payAmount" type="number" step="0.01" value="${Number(item.amount||0).toFixed(2)}"></div><div class="field"><label>Conto</label><select id="payAccount">${accountOptions(preferred?.id,false)}</select></div><div id="payError" class="inline-error"></div><button class="primary-button">Conferma pagamento</button></form>`);$('#payForm').onsubmit=async e=>{e.preventDefault();const amount=Number($('#payAmount').value||0),a=state.accounts.find(x=>String(x.id)===$('#payAccount').value);if(!a||amount<=0)return;if(Number(a.balance||0)<amount){$('#payError').textContent='Saldo insufficiente.';return}a.balance-=amount;item.active=false;item.paidDate=today();item.paidAmount=amount;item.accountId=a.id;await FinanceDB.put('accounts',a);await FinanceDB.put('commitments',item);await FinanceDB.add('movements',{type:'expense',date:today(),title:item.name,amount,accountId:a.id,category:linked?'Rata':'Scadenza'});await advanceAfterPayment(item,amount,linked);closeSheet();await refresh('Pagamento registrato')}}
-
-  async function advanceAfterPayment(item,amount,liability){
-    if(liability){const l={...liability},isFinal=Number(l.finalPayment||0)>0&&l.finalPaymentDate&&String(item.dueDate)===String(l.finalPaymentDate)&&Math.abs(Number(item.amount||0)-Number(l.finalPayment||0))<.02;if(isFinal){l.completed=true;l.monthly=0;l.remaining=0;l.installmentsRemaining=0;l.nextDueDate='';await FinanceDB.put('liabilities',l);return}if(l.remaining!=null&&Number.isFinite(Number(l.remaining)))l.remaining=Math.max(0,Number(l.remaining)-amount);if(l.installmentsRemaining!=null)l.installmentsRemaining=Math.max(0,Number(l.installmentsRemaining)-1);l.completedInstallments=Number(l.completedInstallments||0)+1;const countDone=l.installmentsRemaining!=null&&Number(l.installmentsRemaining)<=0,residualDone=l.remaining!=null&&Number(l.remaining)<=0,regularEnd=l.recurrenceEnd&&String(item.dueDate)>=String(l.recurrenceEnd);if(Number(l.finalPayment||0)>0&&(regularEnd||countDone)){l.regularMonthly=l.regularMonthly??l.monthly;l.monthly=0;l.monthlyPhaseComplete=true;l.nextDueDate=l.finalPaymentDate||''}else if(!Number(l.finalPayment||0)&&(countDone||residualDone||(l.finalDueDate&&String(item.dueDate)>=String(l.finalDueDate)))){l.completed=true;l.monthly=0;l.nextDueDate=''}else l.nextDueDate=FinanceEngine.nextDateByCadence(item.dueDate,'Mensile');await FinanceDB.put('liabilities',l);return}
-    const next=FinanceEngine.nextDateByCadence(item.dueDate,item.cadence);if(item.recurring===true&&next){const copy={...item};delete copy.id;delete copy.paidDate;delete copy.paidAmount;copy.dueDate=next;copy.active=true;copy.generated=true;await FinanceDB.add('commitments',copy)}
+  function payCommitment(id){
+    const item=state.commitments.find(x=>String(x.id)===String(id));
+    if(!item||item.active===false||item.paidDate||item.archived){
+      toast('Questa scadenza non risulta più da pagare');return;
+    }
+    const linked=state.liabilities.find(l=>Number(l.id)===Number(item.liabilityId)||
+      !!(item.liabilityKey&&l.scheduleKey===item.liabilityKey));
+    const preferred=state.accounts.find(a=>!a.archived&&!a.protected&&
+      Number(a.id)===Number(item.accountId||linked?.accountId||setting('primaryAccountId',0)))||
+      state.accounts.find(a=>!a.archived&&!a.protected);
+    openSheet('Registra pagamento',
+      '<form id="payForm" class="form">'+
+      '<p class="helper"><b>'+esc(item.name)+'</b> · rata prevista il '+
+        esc(dueLabel(item.dueDate))+'</p>'+
+      '<div class="field"><label>Importo effettivamente pagato</label>'+
+        '<input id="payAmount" type="number" min="0.01" step="0.01" value="'+
+          Number(item.amount||0).toFixed(2)+'" required></div>'+
+      '<div class="field"><label>Data del pagamento</label>'+
+        '<input id="payDate" type="date" value="'+today()+'" required></div>'+
+      '<div class="field"><label>Conto addebitato</label>'+
+        '<select id="payAccount">'+accountOptions(preferred?.id,false)+'</select></div>'+
+      '<p class="helper">Registrando il pagamento, il saldo del conto diminuirà di questo importo. Non registrarlo una seconda volta se hai già inserito la spesa.</p>'+
+      '<div id="payError" class="inline-error" role="alert"></div>'+
+      '<button class="primary-button" type="submit">Conferma pagamento</button></form>');
+    $('#payForm').onsubmit=async e=>{
+      e.preventDefault();
+      const sum=Number($('#payAmount').value),accountId=Number($('#payAccount').value),
+        paymentDate=$('#payDate').value,btn=$('#payForm button[type="submit"]');
+      if(!sum||sum<=0||!paymentDate||!accountId){
+        $('#payError').textContent='Inserisci importo, data e conto.';return;
+      }
+      const account=state.accounts.find(x=>Number(x.id)===accountId);
+      if(!account||Number(account.balance||0)+0.00001<sum){
+        $('#payError').textContent='Saldo insufficiente sul conto selezionato.';return;
+      }
+      btn.disabled=true;
+      try{
+        await FinanceDB.payScheduledCommitment(item.id,accountId,sum,paymentDate);
+        closeSheet();await refresh('Rata pagata e saldo aggiornato');
+      }catch(err){
+        $('#payError').textContent=err.message||'Impossibile registrare il pagamento.';
+        btn.disabled=false;
+      }
+    };
   }
 
   function openLiability(id){
