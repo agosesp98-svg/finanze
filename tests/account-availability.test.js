@@ -55,6 +55,36 @@ money(assigned.primary.budgetReserved,300,'Budget attribuito al conto scelto');
 money(assigned.primary.free,233);
 money(assigned.spendingAvailable,300,'Budget sul conto esplicitamente selezionato');
 
+// A user changing PostePay from "Carta prepagata" to "Conto corrente"
+// must NOT silently move all living budgets onto the ISP salary account.
+const renamedKind=Engine.accountAvailability({
+  ...snapshot,
+  accounts:[
+    {...accounts[0],id:6,name:'ISP',balance:481.80},
+    {...accounts[1],id:2,name:'PostePay',kind:'Conto corrente',balance:386.59}
+  ],
+  commitments:[
+    {id:1,name:'ChatGPT',amount:23,dueDate:'2026-11-24',accountId:6,active:true},
+    {id:2,name:'Cofidis Dyson',amount:43.29,dueDate:'2026-12-01',accountId:6,active:true},
+    {id:3,name:'Anticipo banca',amount:15.99,dueDate:'2026-12-01',accountId:6,active:true},
+    {id:4,name:'TIM',amount:43.89,dueDate:'2026-12-09',accountId:6,active:true}
+  ],
+  budgets:[
+    {id:1,targetBudget:400,spent:70.31},
+    {id:2,targetBudget:80,spent:26.50},
+    {id:3,targetBudget:50,spent:51},
+    {id:4,targetBudget:40,spent:12.60}
+  ],
+  settings:[{key:'primaryAccountId',value:6},{key:'salaryDay',value:10}]
+},new Date(2026,10,16,12));
+assert.equal(renamedKind.spendingAccountId,2,'PostePay remains spending account');
+money(renamedKind.primary.reservedDue,126.17,'Actual outstanding ISP bills');
+money(renamedKind.primary.budgetReserved,0,'No daily budgets incorrectly assigned to ISP');
+money(renamedKind.primary.free,355.63,'Actual free ISP cash');
+money(renamedKind.spending.budgetReserved,410.59,'Daily budgets assigned to PostePay');
+money(renamedKind.spending.shortfall,24,'PostePay-specific budget gap');
+money(renamedKind.spendingAvailable,386.59,'Available spending balance');
+
 const prepaidLoan={
  id:18,name:'Rata già saldata',monthly:67,
  firstDueDate:'2026-12-01',nextDueDate:'2026-12-01',
