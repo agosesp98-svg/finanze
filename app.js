@@ -468,6 +468,19 @@ const FinanceApp=(()=>{
           dueLabel(activeLinked.dueDate)+'. Per cambiarne la data, apri quella scadenza; non crearne un doppione.';
         return;
       }
+      // An old archived loan with the same financing must not be reactivated.
+      if(!finished&&!archived){
+        const finalAmount=Number($('#liFinalPayment').value||0),finalDate=$('#liFinalDate').value;
+        const duplicate=state.liabilities.find(other=>Number(other.id)!==Number(l.id)&&
+          !other.archived&&!other.completed&&Math.abs(Number(other.monthly||0)-monthly)<0.005&&
+          finalAmount>0&&Math.abs(Number(other.finalPayment||0)-finalAmount)<0.005&&
+          finalDate&&other.finalPaymentDate===finalDate);
+        if(duplicate){
+          $('#liError').textContent='Esiste già il finanziamento attivo "'+
+            duplicate.name+'". Non riattivare una seconda copia dello stesso piano.';
+          return;
+        }
+      }
       l.name=name;l.monthly=monthly;
       l.remaining=$('#liRemaining').value===''?null:Math.max(0,Number($('#liRemaining').value));
       l.nextDueDate=due;
