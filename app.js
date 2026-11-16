@@ -76,11 +76,13 @@ const FinanceApp=(()=>{
     const dueRows=dues.slice(0,3).map(x=>{
       const projected=!!x.projected;
       const loan=!!(x.liabilityId||x.liabilityKey);
-      const action=loan&&x.liabilityId
-        ?'data-liability="'+esc(x.liabilityId)+'"'
-        :projected&&x.sourceCommitmentId
-          ?'data-forecast-commitment="'+esc(x.sourceCommitmentId)+'" data-forecast-date="'+esc(x.dueDate)+'"'
-          :'data-commitment="'+esc(x.id)+'"';
+      const action=!projected&&x.id
+        ?'data-commitment="'+esc(x.id)+'"'
+        :loan&&x.liabilityId
+          ?'data-forecast-liability="'+esc(x.liabilityId)+'" data-forecast-date="'+esc(x.dueDate)+'"'
+          :projected&&x.sourceCommitmentId
+            ?'data-forecast-commitment="'+esc(x.sourceCommitmentId)+'" data-forecast-date="'+esc(x.dueDate)+'"'
+            :'data-commitment="'+esc(x.id)+'"';
       const overdue=String(x.dueDate)<today();
       const account=availability.accounts.find(a=>Number(a.id)===Number(x.accountId));
       return '<button class="list-row home-due-row" type="button" '+action+
@@ -391,7 +393,15 @@ const FinanceApp=(()=>{
       '<label class="loan-check-row"><span><b>Archiviato</b><small>Escluso dal piano e dalle previsioni</small></span><input id="liArchived" type="checkbox" '+(l.archived?'checked':'')+'></label>'+
       '<label class="loan-check-row"><span><b>Rate ordinarie concluse</b><small>Restano soltanto eventuali pagamenti finali</small></span><input id="liMonthlyPhaseComplete" type="checkbox" '+(l.monthlyPhaseComplete?'checked':'')+'></label>'+
       '</div><div id="liError" class="inline-error" role="alert"></div>'+
-      '<button class="primary-button" type="submit">Salva finanziamento</button></form>');
+      '<button class="primary-button" type="submit">Salva finanziamento</button></form>'+
+      (()=>{const next=state.commitments.filter(c=>!c.archived&&c.active!==false&&!c.paidDate&&
+        (Number(c.liabilityId)===Number(l.id)||(l.scheduleKey&&c.liabilityKey===l.scheduleKey))&&
+        Math.abs(Number(c.amount||0)-Number(l.monthly||0))<0.01)
+        .sort((a,b)=>String(a.dueDate).localeCompare(String(b.dueDate)))[0];
+        return next?'<div class="sheet-section"><h3>Prossima rata</h3><p class="helper">'+
+          esc(dueLabel(next.dueDate))+' · '+money(next.amount)+'</p>'+
+          '<button class="secondary-button" type="button" data-pay-commitment="'+next.id+
+          '">Segna rata come pagata</button></div>':''})());
     $('#liabilityForm').onsubmit=async e=>{
       e.preventDefault();
       const name=$('#liName').value.trim(),monthly=Math.max(0,Number($('#liMonthly').value||0)),
