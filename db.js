@@ -191,6 +191,88 @@ const FinanceDB=(()=>{
     });
   }
 
-  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary};
+  // One transaction protects all four records from partial or duplicate payments.
+  async function payScheduledCommitment(commitmentId,accountId,amount,date){
+    const id=Number(commitmentId),aid=Number(accountId),sum=Math.round(Number(amount)*100)/100;
+    if(!Number.isInteger(id)||id<=0||!Number.isInteger(aid)||aid<=0||
+      !Number.isFinite(sum)||sum<=0||!/^\d{4}-\d{2}-\d{2}$/.test(String(date)))
+      throw Error('Dati pagamento non validi.');
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(['accounts','commitments','liabilities','movements'],'readwrite');
+      const accounts=tx.objectStore('accounts'),commitments=tx.objectStore('commitments'),
+        liabilities=tx.objectStore('liabilities'),movements=tx.objectStore('movements');
+      let fault=null;
+      const fail=msg=>{fault=new Error(msg);tx.abort()};
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>{if(!fault)fault=tx.error||Error('Pagamento non riuscito.')};
+      tx.onabort=()=>reject(fault||tx.error||Error('Pagamento annullato senza modifiche.'));
+      commitments.get(id).onsuccess=e=>{
+        const item=e.target.result;
+        if(!item||item.active===false||item.archived||item.paidDate)
+          return fail('Questa rata risulta già pagata o disattivata.');
+        accounts.get(aid).onsuccess=e=>{
+          const account=e.target.result;
+          if(!account||account.archived||account.protected)
+            return fail('Seleziona un conto attivo.');
+          if(Number(account.balance||0)+0.000001<sum)
+            return fail('Saldo del conto insufficiente.');
+          liabilities.getAll().onsuccess=e=>{
+            const related=e.target.result.find(l=>
+              (item.liabilityId!=null&&Number(l.id)===Number(item.liabilityId))||
+              (item.liabilityKey&&l.scheduleKey===item.liabilityKey));
+            commitments.getAll().onsuccess=e=>{
+              const others=e.target.result;
+              accounts.put({...account,balance:Math.round((Number(account.balance||0)-sum)*100)/100});
+              commitments.put({...item,accountId:aid,active:false,paidDate:date,paidAmount:sum});
+              movements.add({type:'expense',date,title:item.name||related?.name||'Scadenza',
+                amount:sum,accountId:aid,category:related?'Rata':'Scadenza',
+                commitmentId:id,...(related?{liabilityId:related.id}:{})});
+              if(related){
+                const l={...related};
+                const final=Number(l.finalPayment||0)>0&&l.finalPaymentDate===item.dueDate&&
+                  Math.abs(Number(item.amount||0)-Number(l.finalPayment||0))<.02;
+                if(final){
+                  l.completed=true;l.monthly=0;l.remaining=0;
+                  l.installmentsRemaining=0;l.nextDueDate='';
+                }else{
+                  if(l.remaining!=null&&Number.isFinite(Number(l.remaining)))
+                    l.remaining=Math.max(0,Number(l.remaining)-sum);
+                  if(l.installmentsRemaining!=null)
+                    l.installmentsRemaining=Math.max(0,Number(l.installmentsRemaining)-1);
+                  l.completedInstallments=Number(l.completedInstallments||0)+1;
+                  const byCount=l.installmentsRemaining!=null&&l.installmentsRemaining<=0;
+                  const byResidual=l.remaining!=null&&l.remaining<=0;
+                  const byEnd=l.recurrenceEnd&&item.dueDate>=l.recurrenceEnd;
+                  if(Number(l.finalPayment||0)>0&&(byCount||byEnd)){
+                    l.regularMonthly=l.regularMonthly??l.monthly;
+                    l.monthly=0;l.monthlyPhaseComplete=true;
+                    l.nextDueDate=l.finalPaymentDate||'';
+                  }else if(!Number(l.finalPayment||0)&&(byCount||byResidual||
+                    (l.finalDueDate&&item.dueDate>=l.finalDueDate))){
+                    l.completed=true;l.monthly=0;l.nextDueDate='';
+                  }else{
+                    const next=FinanceEngine.nextDateByCadence(item.dueDate,'Mensile');
+                    if(next)l.nextDueDate=next;
+                  }
+                }
+                liabilities.put(l);
+              }else if(item.recurring===true){
+                const next=FinanceEngine.nextDateByCadence(item.dueDate,item.cadence);
+                if(next&&!others.some(c=>!c.archived&&c.active!==false&&!c.paidDate&&
+                  c.dueDate===next&&String(c.name)===String(item.name))){
+                  const copy={...item};delete copy.id;delete copy.paidDate;
+                  delete copy.paidAmount;copy.active=true;copy.generated=true;copy.dueDate=next;
+                  commitments.add(copy);
+                }
+              }
+            };
+          };
+        };
+      };
+    });
+  }
+
+  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary,payScheduledCommitment};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceDB;
