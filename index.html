@@ -11,18 +11,18 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <meta name="finanze-version" content="20261127w2">
-  <link rel="manifest" href="./manifest.webmanifest?v=20261127w2">
+  <meta name="finanze-version" content="20261127w3">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261127w3">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=20261127w2">
-  <link rel="stylesheet" href="./plan-update.css?v=20261127w2">
-  <link rel="stylesheet" href="./salary-guide.css?v=20261127w2">
-  <link rel="stylesheet" href="./ui-polish.css?v=20261127w2">
-  <link rel="stylesheet" href="./home-clean.css?v=20261127w2">
-  <link rel="stylesheet" href="./pages-clean.css?v=20261127w2">
-  <link rel="stylesheet" href="./availability-ui.css?v=20261127w2">
-  <link rel="stylesheet" href="./wedding.css?v=20261127w2">
+  <link rel="stylesheet" href="./app.css?v=20261127w3">
+  <link rel="stylesheet" href="./plan-update.css?v=20261127w3">
+  <link rel="stylesheet" href="./salary-guide.css?v=20261127w3">
+  <link rel="stylesheet" href="./ui-polish.css?v=20261127w3">
+  <link rel="stylesheet" href="./home-clean.css?v=20261127w3">
+  <link rel="stylesheet" href="./pages-clean.css?v=20261127w3">
+  <link rel="stylesheet" href="./availability-ui.css?v=20261127w3">
+  <link rel="stylesheet" href="./wedding.css?v=20261127w3">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -192,25 +192,26 @@
     <div class="sheet-grabber"></div><div class="sheet-head"><h2 id="sheetTitle">Dettaglio</h2><button class="icon-button" type="button" data-close-sheet aria-label="Chiudi">×</button></div><div id="sheetBody" class="sheet-body"></div>
   </section>
   <dialog id="weddingDialog" aria-label="Gestione matrimonio"></dialog>
+  <input id="weddingAdjustmentFile" type="file" accept="application/json,.json" hidden aria-label="Importa un aggiornamento del piano Matrimonio">
   <input id="weddingImportFile" type="file" accept="application/json,.json" hidden aria-label="Importa un piano Matrimonio privato">
   <input id="backupInput" type="file" accept="application/json,.json" hidden>
   <input id="planFileInput" type="file" accept="application/json,.json" hidden aria-label="Seleziona il piano privato da importare">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=20261127w2"></script>
-  <script src="./engine.js?v=20261127w2"></script>
-  <script src="./spendable-guard.js?v=20261127w2"></script>
-  <script src="./app.js?v=20261127w2"></script>
-  <script src="./appearance.js?v=20261127w2"></script>
-  <script src="./insights.js?v=20261127w2"></script>
-  <script src="./projection-details.js?v=20261127w2"></script>
-  <script src="./recurrence-controls.js?v=20261127w2"></script>
-  <script src="./goal-priority.js?v=20261127w2"></script>
-  <script src="./plan-patch.js?v=20261127w2"></script>
-  <script src="./plan-update-ui.js?v=20261127w2"></script>
-  <script src="./salary-guide.js?v=20261127w2"></script>
-  <script src="./wedding.js?v=20261127w2"></script>
-  <script src="./app-updater.js?v=20261127w2"></script>
+  <script src="./db.js?v=20261127w3"></script>
+  <script src="./engine.js?v=20261127w3"></script>
+  <script src="./spendable-guard.js?v=20261127w3"></script>
+  <script src="./app.js?v=20261127w3"></script>
+  <script src="./appearance.js?v=20261127w3"></script>
+  <script src="./insights.js?v=20261127w3"></script>
+  <script src="./projection-details.js?v=20261127w3"></script>
+  <script src="./recurrence-controls.js?v=20261127w3"></script>
+  <script src="./goal-priority.js?v=20261127w3"></script>
+  <script src="./plan-patch.js?v=20261127w3"></script>
+  <script src="./plan-update-ui.js?v=20261127w3"></script>
+  <script src="./salary-guide.js?v=20261127w3"></script>
+  <script src="./wedding.js?v=20261127w3"></script>
+  <script src="./app-updater.js?v=20261127w3"></script>
   <script>
     if('serviceWorker' in navigator){
       let refreshing=false;
