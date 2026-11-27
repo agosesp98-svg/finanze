@@ -11,17 +11,18 @@
   <meta name="apple-mobile-web-app-title" content="Finanze">
   <meta name="format-detection" content="telephone=no">
   <title>Finanze</title>
-  <meta name="finanze-version" content="20261116b">
-  <link rel="manifest" href="./manifest.webmanifest?v=20261116b">
+  <meta name="finanze-version" content="20261127w1">
+  <link rel="manifest" href="./manifest.webmanifest?v=20261127w1">
   <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
   <link rel="icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./app.css?v=20261116b">
-  <link rel="stylesheet" href="./plan-update.css?v=20261116b">
-  <link rel="stylesheet" href="./salary-guide.css?v=20261116b">
-  <link rel="stylesheet" href="./ui-polish.css?v=20261116b">
-  <link rel="stylesheet" href="./home-clean.css?v=20261116b">
-  <link rel="stylesheet" href="./pages-clean.css?v=20261116b">
-  <link rel="stylesheet" href="./availability-ui.css?v=20261116b">
+  <link rel="stylesheet" href="./app.css?v=20261127w1">
+  <link rel="stylesheet" href="./plan-update.css?v=20261127w1">
+  <link rel="stylesheet" href="./salary-guide.css?v=20261127w1">
+  <link rel="stylesheet" href="./ui-polish.css?v=20261127w1">
+  <link rel="stylesheet" href="./home-clean.css?v=20261127w1">
+  <link rel="stylesheet" href="./pages-clean.css?v=20261127w1">
+  <link rel="stylesheet" href="./availability-ui.css?v=20261127w1">
+  <link rel="stylesheet" href="./wedding.css?v=20261127w1">
 </head>
 <body>
   <div id="boot" class="boot" aria-live="polite"><div class="boot-mark">€</div></div>
@@ -123,6 +124,7 @@
           <div class="plan-quick-links">
             <button type="button" data-jump-loans>Gestisci finanziamenti <span aria-hidden="true">›</span></button>
             <button type="button" data-plan-jump="scheduledSection">Uscite programmate <span aria-hidden="true">›</span></button>
+            <button type="button" data-view="wedding">Piano matrimonio <span aria-hidden="true">›</span></button>
           </div>
         </section>
         <section id="forecastSection" class="plan-section" aria-labelledby="forecastSectionTitle">
@@ -156,6 +158,11 @@
         </details>
       </section>
 
+      <section id="view-wedding" class="view" aria-labelledby="weddingTitle">
+        <div class="page-head clear-page-head wedding-page-head"><div><h1 id="weddingTitle">Matrimonio</h1><p>Fornitori, scadenze e risparmi realmente disponibili.</p></div></div>
+        <div id="weddingRoot"><p class="wedding-muted">Caricamento del piano...</p></div>
+      </section>
+
       <section id="view-goals" class="view" aria-labelledby="goalsTitle">
         <div class="page-head clear-page-head">
           <div><h1 id="goalsTitle">Obiettivi</h1><p>Metti da parte, un passo alla volta.</p></div>
@@ -175,6 +182,7 @@
       <button class="tab active" type="button" data-view="today" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1h-5v-6h-4v6H5a1 1 0 0 1-1-1v-9Z"/></svg><span>Oggi</span></button>
       <button class="tab" type="button" data-view="movements"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg><span>Movimenti</span></button>
       <button class="tab" type="button" data-view="plan"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4M16 3v4M4 10h16"/></svg><span>Piano</span></button>
+      <button class="tab" type="button" data-view="wedding"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-9-5.8-9-12.4A5.2 5.2 0 0 1 12 5a5.2 5.2 0 0 1 9 3.6C21 15.2 12 21 12 21Z"/></svg><span>Matrimonio</span></button>
       <button class="tab" type="button" data-view="goals"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span>Obiettivi</span></button>
     </nav>
   </div>
@@ -183,23 +191,26 @@
   <section id="sheet" class="sheet" aria-hidden="true" aria-modal="true" role="dialog">
     <div class="sheet-grabber"></div><div class="sheet-head"><h2 id="sheetTitle">Dettaglio</h2><button class="icon-button" type="button" data-close-sheet aria-label="Chiudi">×</button></div><div id="sheetBody" class="sheet-body"></div>
   </section>
+  <dialog id="weddingDialog" aria-label="Gestione matrimonio"></dialog>
+  <input id="weddingImportFile" type="file" accept="application/json,.json" hidden aria-label="Importa un piano Matrimonio privato">
   <input id="backupInput" type="file" accept="application/json,.json" hidden>
   <input id="planFileInput" type="file" accept="application/json,.json" hidden aria-label="Seleziona il piano privato da importare">
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script src="./db.js?v=20261116b"></script>
-  <script src="./engine.js?v=20261116b"></script>
-  <script src="./spendable-guard.js?v=20261116b"></script>
-  <script src="./app.js?v=20261116b"></script>
-  <script src="./appearance.js?v=20261116b"></script>
-  <script src="./insights.js?v=20261116b"></script>
-  <script src="./projection-details.js?v=20261116b"></script>
-  <script src="./recurrence-controls.js?v=20261116b"></script>
-  <script src="./goal-priority.js?v=20261116b"></script>
-  <script src="./plan-patch.js?v=20261116b"></script>
-  <script src="./plan-update-ui.js?v=20261116b"></script>
-  <script src="./salary-guide.js?v=20261116b"></script>
-  <script src="./app-updater.js?v=20261116b"></script>
+  <script src="./db.js?v=20261127w1"></script>
+  <script src="./engine.js?v=20261127w1"></script>
+  <script src="./spendable-guard.js?v=20261127w1"></script>
+  <script src="./app.js?v=20261127w1"></script>
+  <script src="./appearance.js?v=20261127w1"></script>
+  <script src="./insights.js?v=20261127w1"></script>
+  <script src="./projection-details.js?v=20261127w1"></script>
+  <script src="./recurrence-controls.js?v=20261127w1"></script>
+  <script src="./goal-priority.js?v=20261127w1"></script>
+  <script src="./plan-patch.js?v=20261127w1"></script>
+  <script src="./plan-update-ui.js?v=20261127w1"></script>
+  <script src="./salary-guide.js?v=20261127w1"></script>
+  <script src="./wedding.js?v=20261127w1"></script>
+  <script src="./app-updater.js?v=20261127w1"></script>
   <script>
     if('serviceWorker' in navigator){
       let refreshing=false;
