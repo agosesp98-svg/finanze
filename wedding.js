@@ -29,7 +29,8 @@ const FinanceWedding=(()=>{
     if(payload?.kind!=='finanze-wedding-plan'||payload.version!==1||!payload.project||
       payload.project.id!==PROJECT_ID||!Array.isArray(payload.project.suppliers))
       throw Error('Il file non è un piano Matrimonio compatibile con Finanze.');
-    const p=structuredClone(payload.project);
+    const p=typeof structuredClone==='function'?structuredClone(payload.project):
+      JSON.parse(JSON.stringify(payload.project));
     if(p.suppliers.length>100||!dateOK(p.date))throw Error('Data del matrimonio o fornitori non validi.');
     const keys=new Set();
     for(const supplier of p.suppliers){
@@ -291,7 +292,8 @@ const FinanceWedding=(()=>{
       '<label>Importo pagato realmente (€)<input name="amount" type="number" min=".01" step=".01" max="'+
         round(Number(i.gross||0)-Number(i.paidByMe||0))+'" value="'+defaultSum+'"></label>'+
       '<label>Data del pagamento<input name="date" type="date" value="'+
-        new Date().toLocaleDateString('en-CA')+'"></label>'+
+        (new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0')+'-'+
+        String(new Date().getDate()).padStart(2,'0'))+'"></label>'+
       '<label>Conto di addebito<select name="account">'+accountOptions()+'</select></label>'+
       '<p class="wedding-muted">Il conto sarà addebitato dell’intero importo realmente pagato, '+
       'anche se anticipi la quota del partner.</p></div>'+
