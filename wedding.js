@@ -106,11 +106,31 @@ const FinanceWedding=(()=>{
         amount:Number(x.movement.amount||0),provisional:false,actual:true}))));
     return [...planned,...historical];
   }
+  function recurringForCycle(month){
+    const recurrences=project.forecast?.extraRecurrences||[];
+    const year=Number(month.slice(0,4)),m=Number(month.slice(5,7))-1;
+    const start=Date.UTC(year,m,10),end=Date.UTC(year,m+1,10),day=86400000;
+    return recurrences.flatMap(x=>{
+      const first=Date.parse(String(x.firstDue||'')+'T12:00:00Z');
+      const step=Number(x.everyDays)*day;
+      if(!Number.isFinite(first)||!Number.isFinite(step)||step<=0)return[];
+      const index=Math.max(0,Math.ceil((start-first)/step));
+      let count=0;
+      for(let due=first+index*step;due<end&&count<8;due+=step)count++;
+      return count?[{label:x.label,count,amount:round(count*Number(x.amount||0))}]:[];
+    });
+  }
+  function automaticForCycle(month){
+    const auto=project.automatedSavings;
+    if(!auto||(auto.startMonth&&month<auto.startMonth))return{total:0,wedding:0,emergency:0};
+    const total=round(auto.monthlyAmount);
+    const wedding=round(total*Number(auto.buckets.find(x=>x.purpose==='wedding')?.share||0));
+    return{total,wedding,emergency:round(total-wedding)};
+  }
   function forecast(){
     const f=project.forecast||{},months=Object.keys(f.incomes).sort();
-    // Theoretical plan starts from zero. Never mix the live balance of a savings
-    // account with months of simulated income (which would double-count savings).
-    let fund=0;
+    // This is a forecast from zero, never the real bank balance.
+    let fund=0,emergencyFund=0;
     return months.map(month=>{
       const received=movements.filter(m=>m.type==='income'&&
         (m.salaryGuide===true||m.category==='Stipendio')&&m.date&&
@@ -118,13 +138,21 @@ const FinanceWedding=(()=>{
       const observed=received.length>0;
       const income=round(observed?received.reduce((a,m)=>a+Number(m.amount||0),0):
         Number(f.incomes[month]||0));
-      const ordinary=round(Number(f.monthlyBase||0)+Number((f.extraExpenses||{})[month]||0));
+      const recurring=recurringForCycle(month);
+      const recurringTotal=round(recurring.reduce((a,x)=>a+x.amount,0));
+      const ordinary=round(Number(f.monthlyBase||0)+Number((f.extraExpenses||{})[month]||0)+recurringTotal);
       const bills=byCycle(month);
       const due=round(bills.reduce((a,x)=>a+x.amount,0));
       const free=Number(f.reservePerMonth||0);
-      const available=round(income-ordinary-free);
+      const automatic=automaticForCycle(month);
+      // The monthly autopayment is already within the earmarked margin.
+      // Credit only its wedding share back to the wedding projection.
+      const reserved=Math.max(free,automatic.total);
+      const available=round(income-ordinary-reserved+automatic.wedding);
       fund=round(fund+available-due);
-      return{month,income,observed,ordinary,bills,due,free,available,fund};
+      emergencyFund=round(emergencyFund+automatic.emergency);
+      return{month,income,observed,ordinary,bills,due,free,reserved,automatic,
+        recurring,recurringTotal,available,fund,emergencyFund};
     });
   }
   const button=(title,action,extra='')=>'<button type="button" data-wedding-action="'+esc(action)+'" class="'+extra+'">'+esc(title)+'</button>';
