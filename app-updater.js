@@ -1,7 +1,7 @@
 /* Client-only PWA update controls. App financial records stay in IndexedDB. */
 (()=>{
 'use strict';
-const VERSION='20261127w3';
+const VERSION='20261127w4';
 const label=()=>document.getElementById('finanzeVersionLabel');
 const status=()=>document.getElementById('finanzeUpdateStatus');
 const message=msg=>{for(const el of [status(),document.getElementById('finanzeHomeUpdateStatus')])if(el)el.textContent=msg};
