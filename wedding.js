@@ -489,6 +489,7 @@ const FinanceWedding=(()=>{
       if(action){
         if(action.dataset.weddingAction==='import')$('#weddingImportFile')?.click();
         if(action.dataset.weddingAction==='export')exportPlan();
+        if(action.dataset.weddingAction==='import-adjustments')$('#weddingAdjustmentFile')?.click();
         return;
       }
       const pay=e.target.closest('[data-wedding-pay]');
@@ -505,7 +506,34 @@ const FinanceWedding=(()=>{
     $('#weddingImportFile')?.addEventListener('change',e=>{
       importPlan(e.target.files?.[0]);e.target.value='';
     });
+    $('#weddingAdjustmentFile')?.addEventListener('change',async e=>{
+      const file=e.target.files?.[0];e.target.value='';
+      if(!file)return;
+      try{
+        if(file.size>65536)throw Error('File troppo grande.');
+        const patch=JSON.parse(await file.text());
+        if(patch.kind!=='finanze-wedding-adjustment'||patch.version!==1)
+          throw Error('File di aggiornamento non riconosciuto.');
+        const result=await FinanceDB.applyWeddingAdjustment(patch);
+        await reload();render();
+        status(result.skipped?'Aggiornamento già applicato. Nessun duplicato creato.':
+          'Aggiornamento applicato. Conti e movimenti invariati.');
+        if(!result.skipped)document.dispatchEvent(new Event('finanze:finance-changed'));
+      }catch(err){status(err.message||'Importazione non riuscita. Nessun dato modificato.')}
+    });
     document.addEventListener('submit',e=>{
+      if(e.target.id==='weddingAutoForm'){
+        e.preventDefault();
+        const monthly=Number(e.target.elements.monthly.value),
+          share=Number(e.target.elements.share.value);
+        if(!amount(monthly)||!Number.isFinite(share)||share<0||share>100)return;
+        project.automatedSavings.monthlyAmount=round(monthly);
+        project.automatedSavings.buckets.forEach(x=>{
+          x.share=x.purpose==='wedding'?share/100:1-share/100;
+        });
+        persist('Ripartizione prevista aggiornata. Nessun trasferimento registrato.').catch(console.error);
+        return;
+      }
       if(e.target.id!=='weddingSettingsForm')return;
       e.preventDefault();
       const form=e.target,f=project.forecast;
