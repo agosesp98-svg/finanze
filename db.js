@@ -1,6 +1,6 @@
 const FinanceDB=(()=>{
-  const N='finanze-pwa',V=1;
-  const S=['accounts','budgets','commitments','expectedIncomes','goals','liabilities','movements','settings'];
+  const N='finanze-pwa',V=2;
+  const S=['accounts','budgets','commitments','expectedIncomes','goals','liabilities','movements','settings','weddingProjects'];
   let dbPromise=null;
 
   function open(){
@@ -11,7 +11,7 @@ const FinanceDB=(()=>{
         const db=request.result;
         for(const store of S){
           if(!db.objectStoreNames.contains(store)){
-            db.createObjectStore(store,{keyPath:store==='settings'?'key':'id',autoIncrement:store!=='settings'});
+            db.createObjectStore(store,{keyPath:store==='settings'?'key':'id',autoIncrement:store!=='settings'&&store!=='weddingProjects'});
           }
         }
       };
@@ -90,19 +90,23 @@ const FinanceDB=(()=>{
   async function importAll(payload){
     // Never clear real financial data before checking the complete backup.
     if(payload?.version!==1||!payload.stores||
-      S.some(store=>!Array.isArray(payload.stores[store])||
+      S.some(store=>(store!=='weddingProjects'||payload.stores[store]!==undefined)&&
+        (!Array.isArray(payload.stores[store])||
         payload.stores[store].some(entry=>!entry||typeof entry!=='object'||
-          entry[store==='settings'?'key':'id']==null))){
+          entry[store==='settings'?'key':'id']==null)))){
       throw new Error('Backup incompleto o non valido. Nessun dato è stato modificato.');
     }
     // One transaction for every store: an error aborts the entire restore.
     const db=await open();
     return new Promise((resolve,reject)=>{
-      const tx=db.transaction(S,'readwrite');
+      // Older version-1 backups have no weddingProjects store. Preserve its data
+      // when restoring such a backup, rather than silently deleting it.
+      const included=S.filter(key=>Array.isArray(payload.stores[key]));
+      const tx=db.transaction(included,'readwrite');
       tx.oncomplete=()=>resolve();
       tx.onerror=()=>reject(tx.error||new Error('Ripristino non riuscito.'));
       tx.onabort=()=>reject(tx.error||new Error('Ripristino annullato: dati originali conservati.'));
-      for(const key of S){
+      for(const key of included){
         const store=tx.objectStore(key);
         store.clear();
         for(const record of payload.stores[key])store.put(record);
@@ -113,7 +117,7 @@ const FinanceDB=(()=>{
   // One IndexedDB transaction guarantees a complete plan migration or no changes.
   // Movements are NEVER cleared, preserving the historic ledger.
   async function replacePlanningStores(data){
-    const keys=S.filter(k=>k!=='movements');
+    const keys=S.filter(k=>k!=='movements'&&k!=='weddingProjects');
     if(!data||keys.some(k=>!Array.isArray(data[k])))throw Error('Piano incompleto.');
     const db=await open();
     return new Promise((resolve,reject)=>{
@@ -273,6 +277,53 @@ const FinanceDB=(()=>{
     });
   }
 
-  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary,payScheduledCommitment};
+
+  // Pay a wedding installment and debit the real account in one transaction.
+  // Historical imported deposits are never replayed through this method.
+  async function recordWeddingPayment(projectId,supplierId,installmentId,accountId,amount,date){
+    const aid=Number(accountId),sum=Math.round(Number(amount)*100)/100;
+    if(!Number.isInteger(aid)||aid<=0||!Number.isFinite(sum)||sum<=0||
+       !/^\d{4}-\d{2}-\d{2}$/.test(String(date)))
+      throw Error('Controlla importo, data e conto.');
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(['weddingProjects','accounts','movements'],'readwrite');
+      const projects=tx.objectStore('weddingProjects'),accounts=tx.objectStore('accounts'),
+        movements=tx.objectStore('movements');
+      let fault=null;
+      const fail=msg=>{fault=new Error(msg);tx.abort()};
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>{if(!fault)fault=tx.error||Error('Pagamento non riuscito.')};
+      tx.onabort=()=>reject(fault||tx.error||Error('Pagamento annullato senza addebiti.'));
+      projects.get(String(projectId)).onsuccess=e=>{
+        const project=e.target.result;
+        const supplier=project?.suppliers?.find(x=>x.id===supplierId);
+        const installment=supplier?.installments?.find(x=>x.id===installmentId);
+        if(!installment||installment.historical)return fail('Pagamento non disponibile.');
+        const remaining=Math.round((Number(installment.gross||0)-
+          Number(installment.paidByMe||0)-Number(installment.paidByOthers||0))*100)/100;
+        if(sum>remaining+0.001)return fail('L’importo supera il residuo della scadenza.');
+        accounts.get(aid).onsuccess=e=>{
+          const account=e.target.result;
+          if(!account||account.archived||account.protected)
+            return fail('Seleziona un conto spendibile e attivo.');
+          if(Number(account.balance||0)+0.00001<sum)
+            return fail('Saldo insufficiente sul conto selezionato.');
+          account.balance=Math.round((Number(account.balance||0)-sum)*100)/100;
+          installment.paidByMe=Math.round((Number(installment.paidByMe||0)+sum)*100)/100;
+          installment.paidDate=date;
+          const req=movements.add({type:'expense',date,title:supplier.name+' · '+installment.label,
+            amount:sum,accountId:aid,category:'Matrimonio',weddingProjectId:project.id,
+            weddingSupplierId:supplierId,weddingInstallmentId:installmentId});
+          req.onsuccess=()=>{
+            installment.paymentMovementIds=[...(installment.paymentMovementIds||[]),req.result];
+            accounts.put(account);projects.put(project);
+          };
+        };
+      };
+    });
+  }
+
+  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary,payScheduledCommitment,recordWeddingPayment};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceDB;
