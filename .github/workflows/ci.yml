@@ -1,0 +1,30 @@
+name: Validate Finanze changes
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check all browser scripts
+        run: |
+          for file in db.js engine.js spendable-guard.js app.js appearance.js insights.js projection-details.js recurrence-controls.js plan-patch.js goal-priority.js plan-update-ui.js sw.js salary-guide.js app-updater.js wedding.js; do node --check "$file"; done
+      - name: Run financial regression tests
+        run: |
+          node tests/engine.test.js
+          node tests/account-availability.test.js
+          node tests/backup-import.test.js
+          node tests/installment-payment.test.js
+          node tests/home.test.js
+          node tests/pages-clean.test.js
+          node tests/spendable-guard.test.js
+          node tests/plan-update.test.js
+          node tests/plan-import-ui.test.js
+          node tests/wedding.test.js
