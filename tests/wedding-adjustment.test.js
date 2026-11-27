@@ -74,7 +74,7 @@ async function main(){
  assert.equal(tables.commitments.length,2);
  await assert.rejects(()=>FinanceDB.applyWeddingAdjustment({...patch,
    patchId:'invalid-split',automatedSavings:{...patch.automatedSavings,
-     buckets:[{label:'A',share:.6},{label:'B',share:.5}]}}),/non valida/);
+     buckets:[{label:'A',share:.6},{label:'B',share:.5}]}}),/non è valida/);
  assert.equal(tables.commitments.length,2);
  console.log('Atomic partial wedding adjustment, old paid row and no duplicate money: OK');
 }
