@@ -3,14 +3,15 @@ const fs=require('node:fs');
 const html=fs.readFileSync('index.html','utf8');
 const js=fs.readFileSync('app.js','utf8');
 const css=fs.readFileSync('pages-clean.css','utf8');
+const weddingCss=fs.readFileSync('wedding.css','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const v=html.match(/<meta name="finanze-version" content="([^"]+)"/)?.[1];
 assert.ok(v,'App release version must be defined');
 assert.ok(html.includes('pages-clean.css?v='+v),'New page styling must be shipped');
 assert.ok(sw.includes("const V='"+v+"'"),'App and worker versions must match');
 const nav=html.match(/<button class="tab(?: active)?" type="button" data-view="([^"]+)"/g)||[];
-assert.equal(nav.length,4,'App should only have four main tabs');
-for(const view of ['today','movements','plan','goals']){
+assert.equal(nav.length,5,'App should have five tabs, including Matrimonio');
+for(const view of ['today','movements','plan','wedding','goals']){
   assert.ok(html.includes('id="view-'+view+'"'),view+' must be accessible');
 }
 assert.ok(!html.includes('id="view-ai"'),'AI page should be removed');
@@ -48,7 +49,10 @@ for(const id of ['goalTotalSaved','goalTotalRemaining','goalCapacity','goalsCoun
 }
 assert.ok(js.includes("data-contribute"),'Goal deposit action must remain');
 assert.ok(js.includes("data-goal"),'Goal edit action must remain');
-assert.ok(css.includes('.tabbar{grid-template-columns:repeat(4,minmax(0,1fr))}'),
-  'Bottom navigation must have four responsive columns');
+assert.ok(weddingCss.includes('grid-template-columns:repeat(5,minmax(0,1fr))'),
+  'Bottom navigation must support five responsive columns');
 
-console.log('Finanze four-tab redesign and AI removal tests: OK');
+assert.ok(html.includes('wedding.js?v='+v),'Wedding JS must ship in the app');
+assert.ok(html.includes('wedding.css?v='+v),'Wedding styles must ship in the app');
+assert.ok(sw.includes('wedding.js?v=${V}'),'Offline cache must include wedding app');
+console.log('Finanze five-tab redesign and AI removal tests: OK');
