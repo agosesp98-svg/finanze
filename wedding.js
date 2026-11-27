@@ -170,6 +170,7 @@ const FinanceWedding=(()=>{
   }
   function overview(){
     const x=summary(),f=forecast(),last=f.find(r=>r.month==='2028-04');
+    const automated=project.automatedSavings,monthSplit=automaticForCycle('2026-12');
     const upcoming=x.all.filter(i=>remains(i)>.001&&i.supplier.status!=='estimate')
       .sort((a,b)=>String(a.due||a.dueMonth||'9999').localeCompare(String(b.due||b.dueMonth||'9999')));
     const gap=Math.max(0,round(x.remaining+Number(project.safetyBuffer||0)-x.cashFund));
@@ -191,7 +192,14 @@ const FinanceWedding=(()=>{
           fmtMonth(upcoming[0].dueMonth||upcoming[0].planningMonth||'2028-05')+' · giorno da confermare')+
         '</small></span><strong>'+money(remains(upcoming[0]))+'</strong></div>':
         '<p class="wedding-muted">Nessun acconto confermato da pagare.</p>')+
-      '</div><div class="wedding-panel"><h3>Quanto mettere da parte</h3>'+
+      '</div>'+(automated?'<div class="wedding-panel"><h3>'+esc(automated.label||'Salvadanai')+
+        ' · ripartizione provvisoria</h3><div class="wedding-inline"><span>Versamento automatico ogni '+
+        Number(automated.dayOfMonth||17)+' del mese</span><strong>'+money(monthSplit.total)+'</strong></div>'+
+        automated.buckets.map(b=>'<div class="wedding-inline"><span>'+esc(b.label)+
+          '</span><strong>'+money(monthSplit.total*Number(b.share||0))+'</strong></div>').join('')+
+        '<p class="wedding-muted">Arrotondamenti ripartiti allo stesso modo, ma esclusi dalle stime finché '+
+        'non conosciamo i versamenti effettivi. Nessun trasferimento simulato modifica i conti.</p></div>':'')+
+      '<div class="wedding-panel"><h3>Quanto mettere da parte</h3>'+
       '<p>Il fondo reale corrisponde soltanto al saldo di un conto di risparmio dedicato. '+
       'Gli accantonamenti previsti non vengono aggiunti automaticamente alla liquidità reale.</p>'+
       '<div class="wedding-inline"><span>Da accumulare, inclusa riserva</span><strong>'+
@@ -261,7 +269,14 @@ const FinanceWedding=(()=>{
         '<div class="wedding-inline"><span>'+(r.observed?'Entrate stipendio registrate':'Stipendio / mensilità aggiuntive previsti')+'</span><b>'+
           money(r.income)+'</b></div>'+
         '<div class="wedding-inline"><span>Spese mensili e una tantum</span><b>−'+money(r.ordinary)+'</b></div>'+
-        '<div class="wedding-inline"><span>Margine personale non accantonato</span><b>−'+money(r.free)+'</b></div>'+
+        r.recurring.map(x=>'<p class="wedding-muted">Di cui '+esc(x.label)+': '+x.count+
+          ' × '+money(x.amount/x.count)+' = '+money(x.amount)+' (date indicative)</p>').join('')+
+        '<div class="wedding-inline"><span>'+(r.automatic.total?'Margine riservato, inclusi salvadanai':'Margine personale non accantonato')+
+        '</span><b>−'+money(r.reserved)+'</b></div>'+
+        (r.automatic.total?'<div class="wedding-inline"><span>Quota automatica destinata al matrimonio</span><b>+'+
+          money(r.automatic.wedding)+'</b></div><p class="wedding-muted">Quota emergenze: '+
+          money(r.automatic.emergency)+' · Fondo emergenze teorico cumulato: '+
+          money(r.emergencyFund)+'. Gli arrotondamenti non sono stimati.</p>':'')+
         (r.bills.length?r.bills.map(x=>'<div class="wedding-inline"><span>'+
           esc(x.supplier)+(x.provisional?' <small>(data ipotizzata)</small>':'')+
           '</span><b>−'+money(x.amount)+'</b></div>').join(''):
@@ -274,7 +289,8 @@ const FinanceWedding=(()=>{
           esc(r.month)+'">Modifica entrata prevista</button></div></details>').join('')+
       '<p class="wedding-muted wedding-bottom-note">La previsione si basa sulle entrate importate dal tuo piano privato. '+
       'Le mensilità aggiuntive non sono garantite e le imposte effettive possono differire. '+
-      'La spesa di un fornitore è sottratta una sola volta: quando viene pagata, il fondo previsto si aggiorna.</p>';
+      'La spesa di un fornitore è sottratta una sola volta: quando viene pagata, il fondo previsto si aggiorna. '+
+      'Le quote nei salvadanai sono già comprese nel margine riservato.</p>';
   }
   function settings(){
     const f=project.forecast,active=accounts.filter(a=>a.protected&&!a.archived);
@@ -294,6 +310,19 @@ const FinanceWedding=(()=>{
       '<p class="wedding-muted">Collega soltanto un conto protetto destinato esclusivamente al matrimonio. '+
       'Il suo saldo viene letto, non viene spostato né duplicato negli obiettivi.</p>'+
       '<button class="primary-button" type="submit">Salva impostazioni</button></form>'+
+      (project.automatedSavings?'<div class="wedding-panel"><h3>Salvadanai e ripartizione</h3>'+
+        '<p>Ripartizione indicativa del versamento automatico. Il saldo bancario non viene modificato.</p>'+
+        '<form id="weddingAutoForm" class="wedding-settings">'+
+        '<label>Versamento mensile (€)<input name="monthly" type="number" min="0" step=".01" value="'+
+          Number(project.automatedSavings.monthlyAmount||0)+'" required></label>'+
+        '<label>Quota matrimonio (%)<input name="share" type="number" min="0" max="100" step=".01" value="'+
+          round(Number(project.automatedSavings.buckets.find(x=>x.purpose==='wedding')?.share||0)*100)+
+          '" required></label><button class="primary-button">Salva ripartizione</button></form>'+
+        '</div>':'')+
+      '<div class="wedding-panel"><h3>Aggiornamenti senza sostituzione</h3>'+
+      '<p>Importa una configurazione privata per aggiungere scadenze e automatismi, '+
+        'senza sostituire i fornitori già modificati o i movimenti esistenti.</p>'+
+      button('Importa aggiornamento parziale','import-adjustments','secondary-button')+'</div>'+
       '<div class="wedding-panel"><h3>I tuoi dati, sul dispositivo</h3>'+
       '<p>Puoi esportare e importare il piano privato in JSON. Anche il backup generale di Finanze '+
         'contiene il modulo Matrimonio. La sincronizzazione tra dispositivi non è automatica.</p>'+
