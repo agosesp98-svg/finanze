@@ -78,12 +78,17 @@ const FinanceWedding=(()=>{
   }
   function summary(){
     const all=project.suppliers.flatMap(s=>s.installments.map(i=>({...i,supplier:s})));
-    const myTotal=round(all.reduce((a,i)=>a+Number(i.plannedMy||0),0));
-    const paid=round(all.reduce((a,i)=>a+Number(i.paidByMe||0),0));
-    const remaining=round(all.reduce((a,i)=>a+remains(i),0));
+    const budgetItems=all.filter(i=>i.supplier.status!=='gift'&&i.supplier.status!=='historical');
+    const excludedItems=all.filter(i=>i.supplier.status==='gift'||i.supplier.status==='historical');
+    const myTotal=round(budgetItems.reduce((a,i)=>a+Number(i.plannedMy||0),0));
+    const paidPlan=round(budgetItems.reduce((a,i)=>a+Number(i.paidByMe||0),0));
+    const paidExcluded=round(excludedItems.reduce((a,i)=>a+Number(i.paidByMe||0),0));
+    const paid=round(paidPlan+paidExcluded);
+    const remaining=round(budgetItems.reduce((a,i)=>a+remains(i),0));
     const cashFund=accounts.find(a=>Number(a.id)===Number(project.savingsAccountId)&&a.protected&&!a.archived);
-    return{all,myTotal,paid,remaining,cashFund:cashFund?Math.max(0,Number(cashFund.balance||0)):0,
-      cashFundName:cashFund?.name||null,overAdvance:round(all.reduce((a,i)=>
+    return{all,myTotal,paid,paidPlan,paidExcluded,remaining,
+      cashFund:cashFund?Math.max(0,Number(cashFund.balance||0)):0,
+      cashFundName:cashFund?.name||null,overAdvance:round(budgetItems.reduce((a,i)=>
         a+Math.max(0,Number(i.paidByMe||0)-Number(i.plannedMy||0)),0))};
   }
   function byCycle(month){
@@ -146,11 +151,12 @@ const FinanceWedding=(()=>{
       '<h2>'+esc(project.name||'Matrimonio')+'</h2><p>Il ricevimento regalato e le spese personali del partner sono esclusi.</p>'+
       '<div class="wedding-stats">'+card('Pagamenti futuri previsti',x.remaining,'Importi effettivi da finanziare')+
       card('Fondo reale collegato',x.cashFund,x.cashFundName||'Nessun conto dedicato')+
-      card('Già anticipato',x.paid,'Depositi storici inclusi')+
+      card('Già pagato da te',x.paid,
+        x.paidExcluded?'Di cui '+money(x.paidExcluded)+' fuori budget':'Acconti e pagamenti già sostenuti')+
       card('Obiettivo residuo con riserva',gap,'Riserva '+money(project.safetyBuffer||0))+'</div>'+
-      '<div class="wedding-progress"><span>Pagamenti personali effettuati</span><b>'+
-      Math.round(x.paid/(x.paid+x.remaining||1)*100)+'%</b><div><i style="width:'+
-      Math.min(100,100*x.paid/(x.paid+x.remaining||1))+'%"></i></div></div></div>'+
+      '<div class="wedding-progress"><span>Pagamenti sui costi ancora previsti</span><b>'+
+      Math.round(x.paidPlan/(x.paidPlan+x.remaining||1)*100)+'%</b><div><i style="width:'+
+      Math.min(100,100*x.paidPlan/(x.paidPlan+x.remaining||1))+'%"></i></div></div></div>'+
       '<div class="wedding-panel"><h3>La prossima scadenza</h3>'+
       (upcoming.length?'<div class="wedding-inline"><span><b>'+esc(upcoming[0].supplier.name)+'</b>'+
         '<small>'+esc(upcoming[0].due?fmtDate(upcoming[0].due):
@@ -166,8 +172,10 @@ const FinanceWedding=(()=>{
         (coverage<0?'wedding-negative':'')+'">'+money(last.fund)+'</strong></div>':'')+
       '<p class="wedding-muted">Le previsioni dipendono da stipendio, rate, spese e date ipotizzate. '+
       'Non certificano la liquidità futura.</p></div>'+
+      (x.paidExcluded>.01?'<div class="wedding-notice">Hai già sostenuto '+money(x.paidExcluded)+
+        ' per spese storiche escluse dal budget futuro. Non vengono sottratte dai prossimi pagamenti.</div>':'')+
       (x.overAdvance>.01?'<div class="wedding-notice">Hai anticipato '+money(x.overAdvance)+
-        ' oltre la tua quota sui depositi storici. Non viene registrato un rimborso da Dalila finché non lo incassi.</div>':'')+
+        ' oltre la tua quota sui pagamenti condivisi. Eventuali compensazioni non sono considerate incassate.</div>':'')+
       '<div class="wedding-panel"><h3>Attenzioni prima del matrimonio</h3>'+
       '<p>I preventivi non confermati hanno mesi di pianificazione provvisori, non scadenze contrattuali. '+
       'Verifica SIAE, oneri del rito, pasti fornitori ed eventuali extra. Le fedi sono considerate un regalo previsto.</p></div>';
@@ -184,7 +192,8 @@ const FinanceWedding=(()=>{
         const own=round(s.installments.reduce((a,i)=>a+Number(i.plannedMy||0),0));
         const left=round(s.installments.reduce((a,i)=>a+remains(i),0));
         return '<details class="wedding-supplier"><summary><span><small>'+
-        (s.status==='agreed'?'CONCORDATO':s.status==='gift'?'REGALATO / ESCLUSO':'DA PREVENTIVARE')+
+        (s.status==='agreed'?'CONCORDATO':s.status==='gift'?'REGALATO / ESCLUSO':
+          s.status==='historical'?'GIÀ PAGATO · FUORI BUDGET':'DA PREVENTIVARE')+
         '</small><b>'+esc(s.name)+'</b><em>'+esc(s.category||'')+'</em></span>'+
         '<span class="wedding-supplier-numbers"><strong>'+money(left)+'</strong><small>da pagare</small></span></summary>'+
         '<div class="wedding-supplier-detail">'+

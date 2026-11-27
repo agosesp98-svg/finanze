@@ -16,7 +16,9 @@ const project={
         due:'2027-01-09'}]},
     {id:'personal',name:'Personal costs',grossTotal:200,status:'estimate',
       installments:[{id:'estimate',gross:200,plannedMy:200,paidByMe:0,
-        planningMonth:'2027-02'}]}
+        planningMonth:'2027-02'}]},
+    {id:'past',name:'Past contribution outside budget',grossTotal:20,status:'historical',
+      installments:[{id:'paid',gross:20,plannedMy:0,paidByMe:20,historical:true}]}
   ]
 };
 const callbacks={};
@@ -44,7 +46,7 @@ const wedding=vm.runInContext('FinanceWedding',context);
 
 async function main(){
   const payload={kind:'finanze-wedding-plan',version:1,project};
-  assert.equal(wedding.validate(payload).suppliers.length,2);
+  assert.equal(wedding.validate(payload).suppliers.length,3);
   assert.throws(()=>wedding.validate({...payload,project:{...project,id:'wrong'}}),
     /compatibile/);
   assert.throws(()=>wedding.validate({...payload,project:{...project,suppliers:[
@@ -55,9 +57,11 @@ async function main(){
   await callbacks.DOMContentLoaded();
   const s=wedding.summary();
   assert.equal(s.myTotal,400,'Split historical share + personal estimates');
-  assert.equal(s.paid,100,'Imported historical payments are recognized without debit');
+  assert.equal(s.paid,120,'All historical personal payments are counted');
+  assert.equal(s.paidPlan,100,'Plan progress excludes costs outside the future budget');
+  assert.equal(s.paidExcluded,20,'Past contributions are tracked separately from supplier deposits');
   assert.equal(s.remaining,350,'Already-paid deposits are excluded from future bills');
-  assert.equal(s.overAdvance,50,'Partner advance is distinct from personal share');
+  assert.equal(s.overAdvance,50,'Outside-budget past costs are not misclassified as partner advances');
   assert.equal(s.cashFund,0,'Do not invent saving balance from old deposits');
   const rows=wedding.forecast();
   assert.equal(rows[0].month,'2026-12');
