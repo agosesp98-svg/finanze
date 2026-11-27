@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const FinanceDB=require('../db.js');
 // Synthetic finance data; real user accounts, names and balances stay private.
-const copy=o=>JSON.parse(JSON.stringify(o));
+const copy=o=>o===undefined?undefined:JSON.parse(JSON.stringify(o));
 const tables={
   weddingProjects:[],
   commitments:[
