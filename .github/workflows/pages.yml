@@ -39,6 +39,7 @@ jobs:
           node --check sw.js
           node --check salary-guide.js
           node --check app-updater.js
+          node --check wedding.js
       - name: Run financial regression tests
         run: |
           node tests/engine.test.js
@@ -50,6 +51,7 @@ jobs:
           node tests/spendable-guard.test.js
           node tests/plan-update.test.js
           node tests/plan-import-ui.test.js
+          node tests/wedding.test.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
