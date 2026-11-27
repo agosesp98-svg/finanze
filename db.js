@@ -401,6 +401,152 @@ const FinanceDB=(()=>{
     });
   }
 
-  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary,payScheduledCommitment,recordWeddingPayment,applyWeddingAdjustment};
+
+  // Private, self-contained reconciliation from calendar + prior local export.
+  // Intentionally does not open accounts, goals or movements for writing.
+  // Importing twice must not reproduce bills or reset personal changes.
+  async function applyUnifiedReconciliation(patch){
+    const validDate=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s);
+    const finite=n=>Number.isFinite(Number(n))&&Number(n)>=0&&Number(n)<1000000;
+    const norm=s=>String(s||'').trim().toLocaleLowerCase('it-IT');
+    if(!patch||patch.kind!=='finanze-unified-reconciliation'||patch.version!==1||
+      patch.projectId!=='wedding-main'||typeof patch.patchId!=='string'||!patch.patchId||
+      !Array.isArray(patch.upsertCommitments)||patch.upsertCommitments.length>20||
+      !Array.isArray(patch.archiveRecurring)||patch.archiveRecurring.length>15||
+      !Array.isArray(patch.oneOffCommitments)||patch.oneOffCommitments.length>20||
+      !patch.weddingProjectTemplate||patch.weddingProjectTemplate.id!=='wedding-main'||
+      !Array.isArray(patch.weddingProjectTemplate.suppliers)||
+      !patch.weddingProjectTemplate.forecast?.incomes)
+      throw Error('Il file non è un aggiornamento unico di Finanze valido.');
+    const recur=patch.weddingRecurrence;
+    if(!recur||!validDate(recur.firstDue)||!finite(recur.amount)||!recur.id||
+      !Number.isInteger(recur.everyDays)||recur.everyDays<7||recur.everyDays>365)
+      throw Error('Ricorrenza privata non valida.');
+    for(const c of [...patch.upsertCommitments,...patch.oneOffCommitments]){
+      if(!c.name||!validDate(c.dueDate)||!finite(c.amount)||
+        !['Mensile','Ogni 21 giorni','Una tantum'].includes(c.cadence))
+        throw Error('Scadenza non valida: '+String(c.name||'?'));
+    }
+    const db=await open();
+    return new Promise((resolve,reject)=>{
+      const tx=db.transaction(['weddingProjects','commitments','movements'],'readwrite');
+      const projects=tx.objectStore('weddingProjects');
+      const commitments=tx.objectStore('commitments');
+      const movements=tx.objectStore('movements');
+      let fault=null,skipped=false,added=0,updated=0,archived=0;
+      const warnings=[];
+      const fail=msg=>{fault=Error(msg);tx.abort()};
+      tx.oncomplete=()=>resolve({skipped,added,updated,archived,warnings});
+      tx.onerror=()=>{if(!fault)fault=tx.error||Error('Riconciliazione fallita.')};
+      tx.onabort=()=>reject(fault||tx.error||Error('Importazione annullata senza modifiche.'));
+      projects.get(patch.projectId).onsuccess=e=>{
+        const project=e.target.result||structuredClone(patch.weddingProjectTemplate);
+        if((project.appliedAdjustmentIds||[]).includes(patch.patchId)){skipped=true;return}
+        commitments.getAll().onsuccess=e=>{
+          const records=e.target.result;
+          movements.getAll().onsuccess=e=>{
+            const existingMovements=e.target.result;
+            const matches=(item,names)=>names.some(name=>norm(item.name)===norm(name));
+            const openMatches=names=>records.filter(c=>matches(c,names)&&
+              !c.archived&&!c.paidDate&&c.active!==false);
+            const historical=names=>records.filter(c=>matches(c,names)&&c.paidDate)
+              .sort((a,b)=>String(b.paidDate||'').localeCompare(String(a.paidDate||'')));
+            const put=c=>{commitments.put(c);updated++};
+            const insert=c=>{commitments.add(c);added++};
+            // Update one active instance by name. Refuse to guess between
+            // multiple active entries; do not disable or modify paid history.
+            for(const spec of patch.upsertCommitments){
+              const names=[spec.name,...(spec.aliases||[])];
+              const active=openMatches(names);
+              if(active.length>1)return fail('Più scadenze aperte per '+spec.name+
+                ': risolvi il duplicato prima di importare.');
+              if(active.length){
+                const c=active[0];
+                const old=String(c.dueDate||'');
+                const allowed=(spec.allowedPreviousDates||[]).includes(old)||
+                  old===spec.dueDate||
+                  (!!spec.allowLaterSameDay&&old>spec.dueDate&&old.slice(8)===spec.dueDate.slice(8));
+                if(!allowed){
+                  warnings.push('Scadenza personalizzata mantenuta: '+spec.name+' ('+old+')');
+                  continue;
+                }
+                // For later, already-advanced installments do not regress date.
+                const due=old>spec.dueDate?old:spec.dueDate;
+                const amount=Number(spec.amount);
+                const shouldUpdate=Number(c.amount||0)!==amount||c.dueDate!==due||
+                  c.cadence!==spec.cadence||c.recurring!==(spec.cadence!=='Una tantum');
+                if(shouldUpdate)put({...c,amount,dueDate:due,cadence:spec.cadence,
+                  recurring:spec.cadence!=='Una tantum',
+                  estimated:!!spec.estimated,
+                  variableAmount:!!spec.variableAmount,
+                  note:[c.note,spec.note].filter(Boolean).join(' · ')});
+              }else{
+                const prior=historical(names);
+                const due=spec.dueDate;
+                // The last paid historical row remains untouched.
+                const accountId=prior[0]?.accountId||null;
+                insert({name:spec.name,amount:Number(spec.amount),dueDate:due,
+                  cadence:spec.cadence,active:true,recurring:spec.cadence!=='Una tantum',
+                  estimated:!!spec.estimated,variableAmount:!!spec.variableAmount,
+                  accountId,note:spec.note||'Data indicativa'});
+              }
+            }
+            // The old provider's recurring charges are closed, but paid
+            // installments and their underlying expense movements remain.
+            for(const spec of patch.archiveRecurring){
+              for(const c of records.filter(x=>matches(x,[spec.name,...(spec.aliases||[])])&&
+                !x.archived&&x.cadence==='Mensile'&&!x.liabilityId&&!x.liabilityKey)){
+                put({...c,archived:true,active:false,
+                  note:[c.note,spec.note].filter(Boolean).join(' · ')});
+                archived++;
+              }
+            }
+            for(const spec of patch.oneOffCommitments){
+              const names=[spec.name,...(spec.aliases||[])];
+              if(records.some(x=>matches(x,names)&&x.dueDate===spec.dueDate)|| 
+                existingMovements.some(x=>x.type==='expense'&&matches({name:x.title},names)&&
+                  Number(x.amount||0)===Number(spec.amount)&&
+                  String(x.date||'').slice(0,7)===spec.dueDate.slice(0,7)))
+                continue;
+              insert({name:spec.name,amount:Number(spec.amount),dueDate:spec.dueDate,
+                cadence:'Una tantum',recurring:false,active:true,estimated:true,
+                note:spec.note||'Importo da calendario; verificare se già pagato'});
+            }
+            project.forecast=project.forecast||{};
+            const recs=project.forecast.extraRecurrences||[];
+            project.forecast.extraRecurrences=[
+              ...recs.filter(x=>x.id!==recur.id),recur
+            ];
+            // Never overwrite a personal XME allocation already configured.
+            if(!project.automatedSavings)project.automatedSavings=patch.automatedSavings;
+            const f=project.forecast;
+            const baseline=Number(f.monthlyBase||0);
+            if(patch.forecastCorrection){
+              const spec=patch.forecastCorrection;
+              if((spec.baselineCandidates||[]).some(n=>Math.abs(baseline-Number(n))<.011))
+                f.monthlyBase=Number(spec.targetMonthlyBase);
+              else warnings.push('Budget mensile personalizzato non alterato ('+baseline+')');
+              const oldExtra=Number(f.extraExpenses?.[spec.oneOffMonth]||0);
+              if((spec.oneOffCandidates||[]).some(n=>Math.abs(oldExtra-Number(n))<.011)){
+                f.extraExpenses=f.extraExpenses||{};
+                f.extraExpenses[spec.oneOffMonth]=Number(spec.targetOneOffExpense);
+              }else warnings.push('Extra del mese personalizzati non alterati ('+oldExtra+')');
+            }
+            project.reconciliation={
+              date:patch.asOf||'',source:'Confronto backup locale e Google Calendar',
+              checks:patch.verifiedExisting||[],notes:patch.requiresReview||[],
+              warnings
+            };
+            project.appliedAdjustmentIds=[
+              ...(project.appliedAdjustmentIds||[]),patch.patchId
+            ];
+            projects.put(project);
+          };
+        };
+      };
+    });
+  }
+
+  return{S,open,getAll,get,put,add,remove,clear,clearAll,exportAll,importAll,replacePlanningStores,receiveExpectedIncome,recordSalary,payScheduledCommitment,recordWeddingPayment,applyWeddingAdjustment,applyUnifiedReconciliation};
 })();
 if(typeof module!=='undefined'&&module.exports)module.exports=FinanceDB;

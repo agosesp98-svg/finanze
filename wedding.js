@@ -161,8 +161,10 @@ const FinanceWedding=(()=>{
       '<h2>Il tuo matrimonio, dentro Finanze.</h2>'+
       '<p>Importa il piano privato per gestire fornitori, preventivi, acconti e risparmi. '+
       'Nessun dato personale viene incluso nel codice pubblico dell’app.</p>'+
-      button('Importa piano Matrimonio','import','primary-button')+
-      '<small>Il file JSON aggiunge soltanto il modulo Matrimonio. Non modifica conti o movimenti.</small></div>';
+      button('Importa aggiornamento unico','import-adjustments','primary-button')+
+      button('Importa solo piano Matrimonio','import','secondary-button')+
+      '<small>L’aggiornamento unico include anche il piano, se assente. '+
+      'Non modifica saldi, conti o movimenti.</small></div>';
   }
   function card(label,value,extra=''){
     return '<div class="wedding-stat"><small>'+esc(label)+'</small><strong>'+money(value)+'</strong>'+
@@ -322,7 +324,7 @@ const FinanceWedding=(()=>{
       '<div class="wedding-panel"><h3>Aggiornamenti senza sostituzione</h3>'+
       '<p>Importa una configurazione privata per aggiungere scadenze e automatismi, '+
         'senza sostituire i fornitori già modificati o i movimenti esistenti.</p>'+
-      button('Importa aggiornamento parziale','import-adjustments','secondary-button')+'</div>'+
+      button('Importa aggiornamento unico / parziale','import-adjustments','secondary-button')+'</div>'+
       '<div class="wedding-panel"><h3>I tuoi dati, sul dispositivo</h3>'+
       '<p>Puoi esportare e importare il piano privato in JSON. Anche il backup generale di Finanze '+
         'contiene il modulo Matrimonio. La sincronizzazione tra dispositivi non è automatica.</p>'+
@@ -510,9 +512,40 @@ const FinanceWedding=(()=>{
       const file=e.target.files?.[0];e.target.value='';
       if(!file)return;
       try{
-        if(file.size>65536)throw Error('File troppo grande.');
+        if(file.size>262144)throw Error('File di aggiornamento troppo grande.');
         const patch=JSON.parse(await file.text());
-        if(patch.kind!=='finanze-wedding-adjustment'||patch.version!==1)
+        if(patch.version!==1)throw Error('Versione del file non riconosciuta.');
+        if(patch.kind==='finanze-unified-reconciliation'){
+          const rows=[...(patch.upsertCommitments||[]).map(x=>x.name+' — '+money(x.amount)),
+            ...(patch.oneOffCommitments||[]).map(x=>x.name+' — '+money(x.amount)),
+            ...(patch.archiveRecurring||[]).map(x=>x.name+' — stop ricorrenza')];
+          dialog('Verifica l’aggiornamento unico',
+            '<p class="wedding-muted">Confronto con il calendario e il backup precedente. '+
+            'Aggiorna le scadenze future, preservando pagamenti già registrati, '+
+            'conti e saldi. Il piano matrimonio viene creato solo se assente.</p>'+
+            '<div class="wedding-panel"><h3>Modifiche previste</h3>'+
+            rows.map(x=>'<div class="wedding-inline"><span>'+esc(x)+'</span></div>').join('')+
+            '<p class="wedding-muted">Previsioni di risparmio e ricorrenze aggiornate. '+
+            'Le informazioni non confermate sono indicate come stime.</p></div>'+
+            '<p class="wedding-form-error" role="alert"></p>'+
+            '<button type="button" id="applyUnified" class="primary-button">Conferma aggiornamento unico</button>');
+          $('#applyUnified').onclick=async ev=>{
+            const btn=ev.currentTarget,err=$('.wedding-form-error',$('#weddingDialog'));
+            btn.disabled=true;err.textContent='';
+            try{
+              const outcome=await FinanceDB.applyUnifiedReconciliation(patch);
+              $('#weddingDialog').close();
+              await reload();render();
+              status(outcome.skipped?'File già applicato, nessun doppione.':
+                'Allineamento completato: '+outcome.added+' aggiunte, '+
+                outcome.updated+' aggiornamenti. Saldi e movimenti invariati.'+
+                (outcome.warnings.length?' Verificare: '+outcome.warnings.join('; '):''));
+              if(!outcome.skipped)document.dispatchEvent(new Event('finanze:finance-changed'));
+            }catch(error){err.textContent=error.message||'Impossibile aggiornare.';btn.disabled=false}
+          };
+          return;
+        }
+        if(patch.kind!=='finanze-wedding-adjustment')
           throw Error('File di aggiornamento non riconosciuto.');
         const result=await FinanceDB.applyWeddingAdjustment(patch);
         await reload();render();
