@@ -83,27 +83,43 @@ const FinanceWedding=(()=>{
     const remaining=round(all.reduce((a,i)=>a+remains(i),0));
     const cashFund=accounts.find(a=>Number(a.id)===Number(project.savingsAccountId)&&a.protected&&!a.archived);
     return{all,myTotal,paid,remaining,cashFund:cashFund?Math.max(0,Number(cashFund.balance||0)):0,
-      cashFundName:cashFund?.name||null,overAdvance:round(all.filter(i=>i.historical).reduce((a,i)=>
+      cashFundName:cashFund?.name||null,overAdvance:round(all.reduce((a,i)=>
         a+Math.max(0,Number(i.paidByMe||0)-Number(i.plannedMy||0)),0))};
   }
   function byCycle(month){
-    return project.suppliers.flatMap(s=>s.installments.filter(i=>remains(i)>.001&&cycleOf(i)===month)
+    const planned=project.suppliers.flatMap(s=>s.installments.filter(i=>remains(i)>.001&&cycleOf(i)===month)
       .map(i=>({supplier:s.name,id:s.id,installment:i,amount:remains(i),
         provisional:!i.due||s.status==='estimate'})));
+    // A completed payment stays in its actual financial cycle. Its remaining
+    // forecast is removed, so it is counted exactly once, not made to disappear.
+    const historical=project.suppliers.flatMap(s=>s.installments.flatMap(i=>
+      (i.paymentMovementIds||[]).map(id=>({supplier:s.name,installment:i,
+        movement:movements.find(m=>Number(m.id)===Number(id))}))
+      .filter(x=>x.movement&&x.movement.type==='expense'&&
+        cycleOf({due:x.movement.date})===month)
+      .map(x=>({supplier:x.supplier,installment:i,
+        amount:Number(x.movement.amount||0),provisional:false,actual:true}))));
+    return [...planned,...historical];
   }
   function forecast(){
     const f=project.forecast||{},months=Object.keys(f.incomes).sort();
-    const beginning=summary().cashFund;
-    let fund=beginning;
+    // Theoretical plan starts from zero. Never mix the live balance of a savings
+    // account with months of simulated income (which would double-count savings).
+    let fund=0;
     return months.map(month=>{
-      const income=Number(f.incomes[month]||0);
+      const received=movements.filter(m=>m.type==='income'&&
+        (m.salaryGuide===true||m.category==='Stipendio')&&m.date&&
+        cycleOf({due:m.date})===month);
+      const observed=received.length>0;
+      const income=round(observed?received.reduce((a,m)=>a+Number(m.amount||0),0):
+        Number(f.incomes[month]||0));
       const ordinary=round(Number(f.monthlyBase||0)+Number((f.extraExpenses||{})[month]||0));
       const bills=byCycle(month);
       const due=round(bills.reduce((a,x)=>a+x.amount,0));
       const free=Number(f.reservePerMonth||0);
       const available=round(income-ordinary-free);
       fund=round(fund+available-due);
-      return{month,income,ordinary,bills,due,free,available,fund};
+      return{month,income,observed,ordinary,bills,due,free,available,fund};
     });
   }
   const button=(title,action,extra='')=>'<button type="button" data-wedding-action="'+esc(action)+'" class="'+extra+'">'+esc(title)+'</button>';
@@ -142,11 +158,11 @@ const FinanceWedding=(()=>{
         '</small></span><strong>'+money(remains(upcoming[0]))+'</strong></div>':
         '<p class="wedding-muted">Nessun acconto confermato da pagare.</p>')+
       '</div><div class="wedding-panel"><h3>Quanto mettere da parte</h3>'+
-      '<p>Il fondo riconosciuto corrisponde soltanto al saldo di un conto di risparmio dedicato. '+
+      '<p>Il fondo reale corrisponde soltanto al saldo di un conto di risparmio dedicato. '+
       'Gli accantonamenti previsti non vengono aggiunti automaticamente alla liquidità reale.</p>'+
       '<div class="wedding-inline"><span>Da accumulare, inclusa riserva</span><strong>'+
         money(gap)+'</strong></div>'+
-      (last?'<div class="wedding-inline"><span>Fondo teorico al 9 maggio 2028</span><strong class="'+
+      (last?'<div class="wedding-inline"><span>Fondo teorico accumulato entro il 9 maggio 2028</span><strong class="'+
         (coverage<0?'wedding-negative':'')+'">'+money(last.fund)+'</strong></div>':'')+
       '<p class="wedding-muted">Le previsioni dipendono da stipendio, rate, spese e date ipotizzate. '+
       'Non certificano la liquidità futura.</p></div>'+
@@ -205,7 +221,7 @@ const FinanceWedding=(()=>{
         '</b><small>Entrate '+money(r.income)+' · Spese '+money(r.ordinary)+
         '</small></span><span><strong class="'+(r.fund<0?'wedding-negative':'')+'">'+money(r.fund)+'</strong>'+
         '<small>fondo previsto</small></span></summary><div class="wedding-cycle-content">'+
-        '<div class="wedding-inline"><span>Stipendio / mensilità aggiuntive previsti</span><b>'+
+        '<div class="wedding-inline"><span>'+(r.observed?'Entrate stipendio registrate':'Stipendio / mensilità aggiuntive previsti')+'</span><b>'+
           money(r.income)+'</b></div>'+
         '<div class="wedding-inline"><span>Spese mensili e una tantum</span><b>−'+money(r.ordinary)+'</b></div>'+
         '<div class="wedding-inline"><span>Margine personale non accantonato</span><b>−'+money(r.free)+'</b></div>'+
