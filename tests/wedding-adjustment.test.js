@@ -72,6 +72,31 @@ async function main(){
  res=await FinanceDB.applyWeddingAdjustment(patch);
  assert.equal(res.skipped,true,'Identical import is idempotent');
  assert.equal(tables.commitments.length,2);
+ // A previous import may have put the already-paid November date back among
+ // unpaid commitments. Reschedule only that active item; leave paid history.
+ tables.weddingProjects[0].automatedSavings.buckets[0].share=.6;
+ tables.weddingProjects[0].automatedSavings.buckets[1].share=.4;
+ const correction={
+   ...patch,patchId:'synthetic-correction',automatedSavings:undefined,
+   extraRecurrences:[{...patch.extraRecurrences[0],firstDue:'2026-12-21'}],
+   recurringCommitment:{...patch.recurringCommitment,dueDate:'2026-12-21',
+     supersedesDueDate:'2026-11-30'}
+ };
+ res=await FinanceDB.applyWeddingAdjustment(correction);
+ assert.equal(res.skipped,false);
+ assert.equal(tables.commitments.length,2,'No second future commitment created');
+ assert.equal(tables.commitments.find(x=>x.active===true).dueDate,'2026-12-21');
+ assert.equal(tables.commitments.find(x=>x.id===3).paidDate,'2026-11-10',
+   'Do not change the previously paid installment');
+ assert.equal(tables.weddingProjects[0].automatedSavings.buckets[0].share,.6,
+   'Correction-only import preserves customized bank savings allocations');
+ assert.equal(tables.weddingProjects[0].forecast.extraRecurrences.length,1);
+ assert.equal(tables.weddingProjects[0].forecast.extraRecurrences[0].firstDue,'2026-12-21');
+ assert.deepEqual(tables.accounts,before.accounts);
+ assert.deepEqual(tables.movements,before.movements);
+ res=await FinanceDB.applyWeddingAdjustment(correction);
+ assert.equal(res.skipped,true,'Correction import is idempotent');
+ assert.equal(tables.commitments.length,2);
  await assert.rejects(()=>FinanceDB.applyWeddingAdjustment({...patch,
    patchId:'invalid-split',automatedSavings:{...patch.automatedSavings,
      buckets:[{label:'A',share:.6},{label:'B',share:.5}]}}),/non è valida/);
