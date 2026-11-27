@@ -53,6 +53,7 @@ jobs:
           node tests/plan-import-ui.test.js
           node tests/wedding.test.js
           node tests/wedding-adjustment.test.js
+          node tests/unified-reconciliation.test.js
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
