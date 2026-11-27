@@ -116,8 +116,8 @@ async function main(){
  assert.equal(second.skipped,true);
  assert.equal(tables.commitments.length,priorLength,'Import twice creates no doubles');
  assert.equal(tables.weddingProjects.length,1);
- p.automatedSavings.buckets[0].share=.65;
- p.automatedSavings.buckets[1].share=.35;
+ tables.weddingProjects[0].automatedSavings.buckets[0].share=.65;
+ tables.weddingProjects[0].automatedSavings.buckets[1].share=.35;
  const other=await FinanceDB.applyUnifiedReconciliation({...patch,patchId:'test-unified-2'});
  assert.equal(other.skipped,false);
  assert.equal(tables.weddingProjects[0].automatedSavings.buckets[0].share,.65,
