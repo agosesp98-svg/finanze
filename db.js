@@ -330,21 +330,23 @@ const FinanceDB=(()=>{
   async function applyWeddingAdjustment(patch){
     if(!patch||patch.kind!=='finanze-wedding-adjustment'||patch.version!==1||
       typeof patch.patchId!=='string'||!patch.patchId||
-      patch.projectId!=='wedding-main'||!patch.automatedSavings||
+      patch.projectId!=='wedding-main'||
       !Array.isArray(patch.extraRecurrences)||!patch.recurringCommitment)
       throw Error('Aggiornamento non valido.');
     const auto=patch.automatedSavings,c=patch.recurringCommitment;
     const finite=n=>Number.isFinite(Number(n))&&Number(n)>=0&&Number(n)<1000000;
     const date=d=>/^\d{4}-\d{2}-\d{2}$/.test(String(d||''));
-    if(!finite(auto.monthlyAmount)||Number(auto.dayOfMonth)<1||Number(auto.dayOfMonth)>28||
+    if((auto&&(!finite(auto.monthlyAmount)||Number(auto.dayOfMonth)<1||Number(auto.dayOfMonth)>28||
       !Array.isArray(auto.buckets)||auto.buckets.length!==2||
       auto.buckets.some(x=>typeof x.label!=='string'||!x.label||
         !finite(x.share)||Number(x.share)>1)||
-      Math.abs(auto.buckets.reduce((a,x)=>a+Number(x.share),0)-1)>0.00001||
+      Math.abs(auto.buckets.reduce((a,x)=>a+Number(x.share),0)-1)>0.00001))||
       patch.extraRecurrences.some(x=>!x.id||!x.label||!finite(x.amount)||
         !date(x.firstDue)||!Number.isInteger(x.everyDays)||x.everyDays<7||x.everyDays>366)||
       typeof c.name!=='string'||!c.name||!finite(c.amount)||!date(c.dueDate)||
-      typeof c.cadence!=='string'||c.cadence!=='Ogni 21 giorni')
+      typeof c.cadence!=='string'||c.cadence!=='Ogni 21 giorni'||
+      (c.supersedesDueDate!=null&&(!date(c.supersedesDueDate)||
+        c.supersedesDueDate===c.dueDate)))
       throw Error('La ripartizione o la ricorrenza non è valida.');
     const db=await open();
     return new Promise((resolve,reject)=>{
@@ -365,12 +367,17 @@ const FinanceDB=(()=>{
           const existing=items.filter(x=>norm(x.name)===norm(c.name)&&
             !x.archived&&!x.paidDate&&x.active!==false);
           if(existing.length>1)return fail('Scadenze attive duplicate. Controlla il piano.');
-          if(existing.length===1&&existing[0].dueDate!==c.dueDate)
+          if(existing.length===1&&existing[0].dueDate!==c.dueDate&&
+            existing[0].dueDate!==c.supersedesDueDate)
             return fail('Esiste già una scadenza attiva con data diversa. Verificala prima di importare.');
           if(existing.length===1){
             const x=existing[0];
-            commitments.put({...x,amount:Number(c.amount),cadence:c.cadence,recurring:true,
-              estimated:true,note:[x.note,'Intervallo indicativo di 21 giorni'].filter(Boolean).join(' · ')});
+            // Reschedule only an unpaid active item explicitly identified by
+            // supersedesDueDate. Paid history, movements and account balances
+            // are not part of this transaction.
+            commitments.put({...x,amount:Number(c.amount),dueDate:c.dueDate,
+              cadence:c.cadence,recurring:true,estimated:true,
+              note:[x.note,'Intervallo indicativo di 21 giorni'].filter(Boolean).join(' · ')});
           }else{
             const last=items.filter(x=>norm(x.name)===norm(c.name)&&x.accountId!=null)
               .sort((a,b)=>String(b.dueDate||'').localeCompare(String(a.dueDate||'')))[0];
@@ -378,7 +385,9 @@ const FinanceDB=(()=>{
               cadence:c.cadence,recurring:true,active:true,estimated:true,
               accountId:last?.accountId||null,note:'Intervallo indicativo di 21 giorni'});
           }
-          project.automatedSavings=auto;
+          // A correction-only file must not overwrite an existing personalized
+          // XME bucket allocation.
+          if(auto)project.automatedSavings=auto;
           project.forecast=project.forecast||{};
           const previous=project.forecast.extraRecurrences||[];
           project.forecast.extraRecurrences=[
