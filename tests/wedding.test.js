@@ -70,7 +70,27 @@ async function main(){
   assert.equal(rows[1].fund,350);
   assert.equal(rows[2].due,200,'Estimated, editable month is included once');
   assert.equal(rows[2].fund,400);
-  assert.equal(root.innerHTML.includes('Panoramica'),true);
+  // A monthly €100 deposit is already reserved; the wedding receives just
+  // its assigned half. Recurring service fees belong to their actual cycles.
+  storage['wedding-main'].automatedSavings={
+    monthlyAmount:100,dayOfMonth:17,startMonth:'2026-12',buckets:[
+      {purpose:'wedding',label:'Savings A',share:0.5},
+      {purpose:'emergency',label:'Savings B',share:0.5}
+    ]
+  };
+  storage['wedding-main'].forecast.extraRecurrences=[{
+    id:'weekly-test',label:'Example service',amount:20,firstDue:'2026-11-30',everyDays:21
+  }];
+  const planned=wedding.forecast();
+  assert.equal(planned[0].recurringTotal,20);
+  assert.equal(planned[1].recurringTotal,40,'Two sessions in a payday cycle');
+  assert.equal(planned[2].recurringTotal,20);
+  assert.equal(planned[0].automatic.wedding,50);
+  assert.equal(planned[0].automatic.emergency,50);
+  assert.equal(planned[0].emergencyFund,50);
+  assert.equal(planned[0].fund,80,'Wedding allocation offsets only its half of reserved savings');
+  assert.equal(planned[2].emergencyFund,150);
+    assert.equal(root.innerHTML.includes('Panoramica'),true);
   console.log('Wedding plan validation, due cycles and no-phantom-savings forecast: OK');
 }
 main().catch(e=>{console.error(e);process.exitCode=1});
