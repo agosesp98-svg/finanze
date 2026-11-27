@@ -161,8 +161,10 @@ const FinanceWedding=(()=>{
       '<h2>Il tuo matrimonio, dentro Finanze.</h2>'+
       '<p>Importa il piano privato per gestire fornitori, preventivi, acconti e risparmi. '+
       'Nessun dato personale viene incluso nel codice pubblico dell’app.</p>'+
-      button('Importa piano Matrimonio','import','primary-button')+
-      '<small>Il file JSON aggiunge soltanto il modulo Matrimonio. Non modifica conti o movimenti.</small></div>';
+      button('Importa aggiornamento unico','import-adjustments','primary-button')+
+      button('Importa solo piano Matrimonio','import','secondary-button')+
+      '<small>L’aggiornamento unico include anche il piano, se assente. '+
+      'Non modifica saldi, conti o movimenti.</small></div>';
   }
   function card(label,value,extra=''){
     return '<div class="wedding-stat"><small>'+esc(label)+'</small><strong>'+money(value)+'</strong>'+
